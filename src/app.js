@@ -3,6 +3,7 @@ import { Game, SEATS } from './game.js';
 import { houseEdge, roundVariance } from './edge.js';
 import { drawSdChart, cumulative } from './sdchart.js';
 import { chipSVG } from './chips.js';
+import { addMistake, buildTally, rankMistakes } from './mistakes.js';
 
 const CHIPS = [5, 25, 100, 500, 1000];
 const DEFAULT_TRAINING = {
@@ -61,6 +62,18 @@ stats.history = Array.isArray(stats.history) ? stats.history : [];
 stats.startedAt ??= Date.now();
 const MAX_ARCHIVE = 25;
 let archive = loadArchive();
+
+// All-time mistake tally. Built once from saved session logs, then updated
+// on every mistake so it keeps counting past each session's log limit.
+let tally = (() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('bj.mistakeTally') || 'null');
+    if (saved && typeof saved === 'object') return saved;
+  } catch {
+    // fall through and rebuild
+  }
+  return buildTally([stats.mistakes, ...archive.map((a) => a.mistakes)]);
+})();
 
 function loadArchive() {
   try {
@@ -448,6 +461,8 @@ function act(action) {
       stake: fb.stake,
     });
     stats.mistakes.length = Math.min(stats.mistakes.length, MAX_MISTAKES);
+    addMistake(tally, stats.mistakes[0]);
+    save('bj.mistakeTally', tally);
   }
   const tone = fb.correct ? 'good' : 'bad';
   roundMessages.push({ html, tone });
@@ -687,6 +702,54 @@ function renderArchive() {
     });
   });
 }
+
+let mistakeSort = 'impact';
+
+function renderMistakeSummary() {
+  const rows = rankMistakes(tally, mistakeSort);
+  const total = rows.reduce((s, r) => s + r.count, 0);
+  const cost = rows.reduce((s, r) => s + r.cost, 0);
+  $('ms-total').textContent = total
+    ? `${total} mistake${total === 1 ? '' : 's'} in ${rows.length} situation${rows.length === 1 ? '' : 's'}, ${money(cost, false)} of EV lost in all.`
+    : '';
+  for (const b of document.querySelectorAll('[data-sort]')) {
+    b.setAttribute('aria-pressed', String(b.dataset.sort === mistakeSort));
+  }
+  if (!rows.length) {
+    $('ms-list').innerHTML = '<p class="note">No mistakes yet. Nice.</p>';
+    return;
+  }
+  const pct = (x) => `${(x * 100).toFixed(x * 100 >= 10 ? 0 : 1)}%`;
+  $('ms-list').innerHTML = rows
+    .map(
+      (r, i) => `
+      <li class="ms-row">
+        <span class="ms-rank">${i + 1}</span>
+        <div class="ms-body">
+          <div class="ms-title">${r.label}</div>
+          <div class="ms-meta">Book play: <strong>${ACTION_NAMES[r.book]}</strong> · ${r.count}×</div>
+        </div>
+        <div class="ms-cost">
+          <div class="ms-impact">−${pct(r.perHand)}</div>
+          <div class="ms-sub">${money(r.perHand * 100, false)} per $100 hand</div>
+          <div class="ms-sub">${money(r.cost, false)} total</div>
+        </div>
+      </li>`
+    )
+    .join('');
+}
+
+$('mistakes-btn').addEventListener('click', () => {
+  renderMistakeSummary();
+  $('mistake-summary').showModal();
+});
+$('ms-close').addEventListener('click', () => $('mistake-summary').close());
+document.querySelectorAll('[data-sort]').forEach((b) =>
+  b.addEventListener('click', () => {
+    mistakeSort = b.dataset.sort;
+    renderMistakeSummary();
+  })
+);
 
 $('chart-btn').addEventListener('click', () => {
   renderChart();

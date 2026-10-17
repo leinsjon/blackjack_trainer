@@ -145,11 +145,34 @@ test('outcome moments and house edge', async () => {
   assert.ok(Math.abs(roundVariance([100]) - 13225) < 1);
   const g = new Game(rules());
   let rounds = 0;
+  let positive = 0;
   while (rounds < 30) {
     g.deal({ wagers: [100, 50] });
     if (g.phase === 'over') continue;
     while (g.phase === 'player') g.act(g.expected());
-    assert.ok(g.variance > 0);
+    // Zero only when every decision was a surrender (a certain result).
+    assert.ok(g.variance >= 0);
+    if (g.variance > 0) positive++;
     rounds++;
   }
+  assert.ok(positive > 20);
+});
+
+test('mistake tally groups and ranks by per-hand EV', async () => {
+  const { buildTally, addMistake, rankMistakes } = await import('../src/mistakes.js');
+  const t = buildTally([
+    [
+      { situation: 'Hard 12 vs dealer 3', chose: 'S', book: 'H', cost: 2, stake: 100 },
+      { situation: 'Hard 12 vs dealer 3', chose: 'S', book: 'H', cost: 4, stake: 200 },
+    ],
+    [{ situation: 'Pair of 10s vs dealer 6', chose: 'P', book: 'S', cost: 20, stake: 100 }],
+  ]);
+  addMistake(t, { situation: 'Soft 18 vs dealer 9', chose: 'S', book: 'H', cost: 1, stake: 25 });
+  const rows = rankMistakes(t);
+  assert.equal(rows[0].label, 'Split pair of 10s vs dealer 6');
+  assert.equal(rows[1].label, 'Stood on soft 18 vs dealer 9');
+  const h12 = rows.find((r) => r.situation === 'Hard 12 vs dealer 3');
+  assert.equal(h12.count, 2);
+  assert.ok(Math.abs(h12.perHand - 0.02) < 1e-9);
+  assert.equal(rankMistakes(t, 'count')[0].situation, 'Hard 12 vs dealer 3');
 });

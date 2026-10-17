@@ -424,3 +424,18 @@ dialog h3 { font-size: 0.85rem; margin: 14px 0 6px; color: var(--muted); }
 .archive-item summary { display: grid; grid-template-columns: 1.6fr 1fr 1fr 0.7fr; gap: 6px; padding: 10px 0; cursor: pointer; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .archive-item summary span:not(:first-child) { text-align: right; }
 .a-date { font-weight: 700; }
+
+.top-actions { flex-wrap: wrap; }
+.top-actions .pill-btn { padding: 7px 10px; }
+.ms-sort { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.ms-sort .pill-btn[aria-pressed="true"] { background: var(--gold); color: #2b1d00; border-color: var(--gold); }
+.ms-list { list-style: none; margin: 0; padding: 0; }
+.ms-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.ms-rank { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 800; background: rgba(255, 255, 255, 0.1); }
+.ms-row:nth-child(-n+3) .ms-rank { background: #7f1d1d; color: #fecaca; }
+.ms-title { font-weight: 700; font-size: 0.92rem; }
+.ms-meta { color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+.ms-meta strong { color: var(--gold); }
+.ms-cost { text-align: right; font-variant-numeric: tabular-nums; }
+.ms-impact { color: var(--bad); font-weight: 800; font-size: 1rem; }
+.ms-sub { color: var(--muted); font-size: 0.72rem; white-space: nowrap; }

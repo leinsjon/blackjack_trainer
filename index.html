@@ -17,6 +17,7 @@
     <nav class="top-actions">
       <button type="button" class="pill-btn" id="chart-btn">Chart</button>
       <button type="button" class="pill-btn" id="session-btn">Session</button>
+      <button type="button" class="pill-btn" id="mistakes-btn">Mistakes</button>
       <button type="button" class="pill-btn" id="settings-btn">Rules</button>
       <button type="button" class="pill-btn" id="new-session-btn">New session</button>
     </nav>
@@ -156,6 +157,21 @@
       <span class="c-Rs">Rs</span> Surrender, else stand
       <span class="c-Rp">Rp</span> Surrender, else split
     </p>
+  </dialog>
+
+  <dialog id="mistake-summary">
+    <div class="dialog-head">
+      <h2>Your most costly mistakes</h2>
+      <button type="button" class="pill-btn" id="ms-close">Close</button>
+    </div>
+    <p class="note">Every session, archived ones included. EV impact is how much of the bet each mistake gives up on average versus book play.</p>
+    <div class="ms-sort" role="group" aria-label="Sort mistakes by">
+      <button type="button" class="pill-btn" data-sort="impact">EV per hand</button>
+      <button type="button" class="pill-btn" data-sort="count">Most frequent</button>
+      <button type="button" class="pill-btn" data-sort="cost">Total cost</button>
+    </div>
+    <p class="note" id="ms-total"></p>
+    <ol class="ms-list" id="ms-list"></ol>
   </dialog>
 
   <dialog id="session">
