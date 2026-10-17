@@ -2,6 +2,7 @@ import { DEFAULT_RULES, ACTION_NAMES, handTotal, buildChart } from './strategy.j
 import { Game, SEATS } from './game.js';
 import { houseEdge, roundVariance } from './edge.js';
 import { drawSdChart, cumulative } from './sdchart.js';
+import { chipSVG } from './chips.js';
 
 const CHIPS = [5, 25, 100, 500, 1000];
 const DEFAULT_TRAINING = {
@@ -57,6 +58,18 @@ if (!Array.isArray(training.wagers) || training.wagers.length !== SEATS) {
 let stats = load('bj.stats', EMPTY_STATS);
 stats.mistakes = Array.isArray(stats.mistakes) ? stats.mistakes : [];
 stats.history = Array.isArray(stats.history) ? stats.history : [];
+stats.startedAt ??= Date.now();
+const MAX_ARCHIVE = 25;
+let archive = loadArchive();
+
+function loadArchive() {
+  try {
+    const list = JSON.parse(localStorage.getItem('bj.archive') || '[]');
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
 
 const game = new Game(rules);
 let countVisible = false; // the count starts masked on every visit
@@ -127,7 +140,7 @@ function chipEl(value) {
   const el = document.createElement('div');
   el.className = 'chip';
   el.dataset.v = value;
-  el.textContent = value >= 1000 ? `${value / 1000}K` : value;
+  el.innerHTML = chipSVG(value);
   return el;
 }
 
@@ -501,36 +514,18 @@ function perHand(amount) {
 }
 
 function renderSession() {
-  const rows = [
-    ['Rounds played', String(stats.rounds)],
-    ['Hands played', String(stats.hands)],
-    ['Decisions', `${stats.decisions} (${stats.correct} by the book)`],
-    ['Best streak', String(stats.best)],
-    ['Net winnings', money(stats.net)],
-    ['Expected (your play)', money(stats.expected)],
-    ['House edge for these rules', `${(houseEdge(rules) * 100).toFixed(2)}%`],
-    ['EV lost to house edge (perfect play)', `${money(stats.edgeCost, false)}${perHand(stats.edgeCost)}`],
-    ['EV lost to mistakes', `${money(stats.evLost, false)}${perHand(stats.evLost)}`],
-    ['Total EV lost', `${money(stats.edgeCost + stats.evLost, false)}${perHand(stats.edgeCost + stats.evLost)}`],
-    ['Luck (net − expected)', money(stats.net - stats.expected)],
-  ];
+  $('session-started').textContent = `Started ${dateFmt(stats.startedAt)}`;
+  const rows = sessionRows(stats);
+  rows.splice(6, 0, ['House edge for these rules', `${(houseEdge(rules) * 100).toFixed(2)}%`]);
+  rows.splice(9, 0, [
+    'Total EV lost',
+    `${money(stats.edgeCost + stats.evLost, false)}${perHand(stats.edgeCost + stats.evLost)}`,
+  ]);
+  $('session-summary').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   drawSdChart($('sd-dealt'), cumulative(stats.history, 'exp', 'var'), { label: 'Net vs cards dealt' });
   drawSdChart($('sd-blind'), cumulative(stats.history, 'hexp', 'hvar'), { label: 'Net vs hands and stakes' });
-  $('session-summary').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  if (stats.mistakes.length === 0) {
-    $('mistakes').innerHTML = '<p class="note">No mistakes yet.</p>';
-    return;
-  }
-  $('mistakes').innerHTML = `
-    <table class="mistake-table">
-      <thead><tr><th>Hand</th><th>You</th><th>Book</th><th>EV lost</th></tr></thead>
-      <tbody>${stats.mistakes
-        .map(
-          (m) =>
-            `<tr><td>${m.situation}</td><td>${ACTION_NAMES[m.chose]}</td><td>${ACTION_NAMES[m.book]}</td><td>${money(m.cost, false)}</td></tr>`
-        )
-        .join('')}</tbody>
-    </table>`;
+  $('mistakes').innerHTML = mistakesTable(stats.mistakes);
+  renderArchive();
 }
 
 // ---------- events ----------
@@ -578,12 +573,120 @@ $('session-btn').addEventListener('click', openSession);
 $('stat-lost').addEventListener('click', openSession);
 $('stat-edge').addEventListener('click', openSession);
 $('session-close').addEventListener('click', () => $('session').close());
-$('reset-stats').addEventListener('click', () => {
-  stats = { ...EMPTY_STATS, mistakes: [], history: [] };
+// Archives the current session (if anything was played) and starts fresh:
+// stats, balance, mistakes, charts and the shoe all reset.
+function newSession() {
+  const played = stats.rounds > 0 || stats.decisions > 0;
+  const msg = played
+    ? 'Start a new session? This session will be saved to the archive and all stats reset.'
+    : 'Start a new session? All stats will be reset.';
+  if (!window.confirm(msg)) return;
+  clearTimeout(autoTimer);
+  if (played) {
+    archive.unshift({
+      ...stats,
+      endedAt: Date.now(),
+      rules: rulesSummary(rules),
+      houseEdge: houseEdge(rules),
+      bankroll: training.bankroll,
+    });
+    archive.length = Math.min(archive.length, MAX_ARCHIVE);
+    try {
+      localStorage.setItem('bj.archive', JSON.stringify(archive));
+    } catch {
+      // Too large or storage unavailable: drop chart history from old entries and retry.
+      archive.forEach((a, i) => i > 0 && (a.history = []));
+      try {
+        localStorage.setItem('bj.archive', JSON.stringify(archive));
+      } catch {
+        // Keep the archive in memory for this visit only.
+      }
+    }
+  }
+  stats = { ...EMPTY_STATS, mistakes: [], history: [], startedAt: Date.now() };
   save('bj.stats', stats);
-  renderStats();
-  renderSession();
-});
+  game.setRules(rules); // fresh shoe, count back to zero
+  setFeedback(played ? 'New session started. The last one is in the archive under Session.' : 'New session started.');
+  render();
+  if ($('session').open) renderSession();
+}
+
+$('reset-stats').addEventListener('click', newSession);
+$('new-session-btn').addEventListener('click', newSession);
+
+function sessionRows(s) {
+  const hands = s.hands || 0;
+  const per = (x) => (hands ? ` <small>(${money(x / hands, false)}/hand)</small>` : '');
+  return [
+    ['Rounds played', String(s.rounds)],
+    ['Hands played', String(hands)],
+    ['Decisions', `${s.decisions} (${s.correct} by the book)`],
+    ['Best streak', String(s.best)],
+    ['Net winnings', money(s.net)],
+    ['Expected (your play)', money(s.expected)],
+    ['EV lost to house edge (perfect play)', `${money(s.edgeCost || 0, false)}${per(s.edgeCost || 0)}`],
+    ['EV lost to mistakes', `${money(s.evLost, false)}${per(s.evLost)}`],
+    ['Luck (net − expected)', money(s.net - s.expected)],
+  ];
+}
+
+function mistakesTable(list) {
+  if (!list.length) return '<p class="note">No mistakes.</p>';
+  return `
+    <table class="mistake-table">
+      <thead><tr><th>Hand</th><th>You</th><th>Book</th><th>EV lost</th></tr></thead>
+      <tbody>${list
+        .map(
+          (m) =>
+            `<tr><td>${m.situation}</td><td>${ACTION_NAMES[m.chose]}</td><td>${ACTION_NAMES[m.book]}</td><td>${money(m.cost, false)}</td></tr>`
+        )
+        .join('')}</tbody>
+    </table>`;
+}
+
+const dateFmt = (t) =>
+  new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+function renderArchive() {
+  const el = $('archive');
+  if (!archive.length) {
+    el.innerHTML = '<p class="note">No past sessions yet. Start a new session to archive this one.</p>';
+    return;
+  }
+  el.innerHTML = archive
+    .map((a, i) => {
+      const acc = a.decisions ? `${Math.round((a.correct / a.decisions) * 100)}%` : '–';
+      const netClass = a.net > 0.005 ? 'pos' : a.net < -0.005 ? 'neg' : '';
+      return `
+      <details class="archive-item" data-i="${i}">
+        <summary>
+          <span class="a-date">${dateFmt(a.startedAt ?? a.endedAt)}</span>
+          <span>${a.hands} hands</span>
+          <span class="${netClass}">${money(a.net)}</span>
+          <span>${acc}</span>
+        </summary>
+        <p class="note">${a.rules}${a.houseEdge !== undefined ? ` · house edge ${(a.houseEdge * 100).toFixed(2)}%` : ''}. Ended ${dateFmt(a.endedAt)}.</p>
+        <dl class="summary">${sessionRows(a).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+        <h3>Net vs the cards dealt</h3>
+        <div class="sd-chart a-dealt"></div>
+        <h3>Net vs hands and stakes only</h3>
+        <div class="sd-chart a-blind"></div>
+        <h3>Mistakes</h3>
+        ${mistakesTable(a.mistakes || [])}
+      </details>`;
+    })
+    .join('');
+  el.querySelectorAll('details').forEach((d) => {
+    d.addEventListener('toggle', () => {
+      if (!d.open || d.dataset.drawn) return;
+      const a = archive[Number(d.dataset.i)];
+      const h = a.history || [];
+      drawSdChart(d.querySelector('.a-dealt'), cumulative(h, 'exp', 'var'), { label: 'Net vs cards dealt' });
+      drawSdChart(d.querySelector('.a-blind'), cumulative(h, 'hexp', 'hvar'), { label: 'Net vs hands and stakes' });
+      d.dataset.drawn = '1';
+    });
+  });
+}
 
 $('chart-btn').addEventListener('click', () => {
   renderChart();

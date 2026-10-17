@@ -11,6 +11,7 @@ A casino-style web app for practicing blackjack basic strategy. Works on phones 
 - **Standard deviation charts** in the Session panel: your net against ±1σ/±2σ bands given the cards you were dealt, and against bands from hand count and stakes alone.
 - **Hi-Lo count**: running count and true count (running count ÷ decks left), hidden until you tap it.
 - **Strategy chart** generated for the current rules.
+- **New session** (top bar or Session panel) resets the balance and every stat, and saves the old session to an archive you can browse with its charts and mistakes.
 - **Focused practice** on hard totals, soft totals or pairs.
 - Keyboard shortcuts on desktop: H, S, D, P, R, and Space to deal.
 

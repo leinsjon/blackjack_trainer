@@ -18,6 +18,7 @@
       <button type="button" class="pill-btn" id="chart-btn">Chart</button>
       <button type="button" class="pill-btn" id="session-btn">Session</button>
       <button type="button" class="pill-btn" id="settings-btn">Rules</button>
+      <button type="button" class="pill-btn" id="new-session-btn">New session</button>
     </nav>
   </header>
 
@@ -162,6 +163,7 @@
       <h2>This session</h2>
       <button type="button" class="pill-btn" id="session-close">Close</button>
     </div>
+    <p class="note" id="session-started"></p>
     <dl class="summary" id="session-summary"></dl>
     <p class="note">Expected is what your decisions were worth on average: the book-play EV of each hand you were dealt, minus the EV your mistakes gave up. Net minus Expected is luck. EVs are estimates from the shoe composition and current rules. With &ldquo;play each hand to the end&rdquo; off, mistakes still count toward EV lost but hands are not settled.</p>
     <h2>Net vs the cards you were dealt</h2>
@@ -173,8 +175,11 @@
     <h2>Mistakes</h2>
     <div id="mistakes"></div>
     <div class="dialog-actions">
-      <button type="button" class="pill-btn" id="reset-stats">Start new session</button>
+      <button type="button" class="btn deal" id="reset-stats">Start new session</button>
     </div>
+    <p class="note">Starting a new session saves this one to the archive below, then resets the balance, all stats, charts and mistakes, and reshuffles the shoe.</p>
+    <h2>Archive</h2>
+    <div id="archive"></div>
   </dialog>
 
   <script type="module" src="src/app.js"></script>
