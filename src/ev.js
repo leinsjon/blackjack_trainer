@@ -141,7 +141,7 @@ export function actionMoments(cards, upCard, rules, available, removed = cards.c
     const one = draws((c) => {
       const h = v + c;
       const a = v === 1 || c === 1;
-      if (v === 1) return stand(best(h, a), dealer); // split aces get one card
+      if (v === 1 && !rules.hitSplitAces) return stand(best(h, a), dealer); // one card only
       let m = hitStand(h, a);
       if (rules.das && canDoubleTotal(h, a, rules.doubleOn)) {
         const d = double(h, a);

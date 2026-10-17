@@ -13,6 +13,7 @@ export function houseEdge(rules) {
   if (rules.doubleOn === '9-11') edge += 0.0009;
   if (rules.doubleOn === '10-11') edge += 0.0018;
   if (rules.resplitAces) edge -= 0.0008;
+  if (rules.hitSplitAces) edge -= 0.0019;
   if (rules.surrender) edge -= rules.h17 ? 0.0009 : 0.0008;
   if (rules.maxHands === 2) edge += 0.0003;
   if (rules.maxHands === 3) edge += 0.0001;

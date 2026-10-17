@@ -135,6 +135,7 @@ function rulesSummary(r) {
     r.das ? 'DAS' : 'no DAS',
     r.doubleOn === 'any' ? 'double any 2' : `double ${r.doubleOn}`,
     r.resplitAces ? 'RSA' : 'no RSA',
+    r.hitSplitAces ? 'hit/double split aces' : 'one card on split aces',
     r.surrender ? 'late surrender' : 'no surrender',
     `BJ ${r.blackjackPays}`,
   ].join(' · ');
@@ -520,6 +521,7 @@ function readSettings() {
     doubleOn: f.doubleOn.value,
     surrender: f.surrender.checked,
     resplitAces: f.resplitAces.checked,
+    hitSplitAces: f.hitSplitAces.checked,
     maxHands: Number(f.maxHands.value),
     blackjackPays: f.blackjackPays.value,
   };
