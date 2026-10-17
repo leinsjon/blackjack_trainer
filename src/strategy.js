@@ -10,7 +10,6 @@ export const DEFAULT_RULES = {
   doubleOn: 'any', // 'any' | '9-11' | '10-11'
   surrender: true, // late surrender
   resplitAces: false,
-  hitSplitAces: false, // true: split aces play like any split hand (hit, double)
   maxHands: 4, // max hands after splitting
   blackjackPays: '3:2', // '3:2' | '6:5'
 };

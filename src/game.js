@@ -166,11 +166,11 @@ export class Game {
       seatHands < r.maxHands &&
       (!aces || !hand.splitAces || r.resplitAces);
     return {
-      H: !this.oneCardOnly(hand),
+      H: !hand.splitAces,
       S: true,
       D:
         two &&
-        !this.oneCardOnly(hand) &&
+        !hand.splitAces &&
         (!hand.fromSplit || r.das) &&
         doubleAllowedForTotal(hand.cards, r),
       P: canSplit,
@@ -178,17 +178,11 @@ export class Game {
     };
   }
 
-  // Split aces that get one card only (when the rules do not let you hit
-  // or double them); they can only stand or resplit.
-  oneCardOnly(hand) {
-    return hand.splitAces && !this.rules.hitSplitAces;
-  }
-
   // The basic strategy play for the active hand.
   expected() {
     const hand = this.hand;
     const av = this.available(hand);
-    if (this.oneCardOnly(hand)) return av.P ? 'P' : 'S';
+    if (hand.splitAces) return av.P ? 'P' : 'S';
     return correctAction(hand.cards, this.upValue, this.rules, {
       canDouble: av.D,
       canSplit: av.P,
@@ -252,7 +246,7 @@ export class Game {
           h.fromSplit = true;
           h.splitAces = splitAces;
           h.cards.push(this.draw());
-          if (splitAces && !this.rules.hitSplitAces) {
+          if (splitAces) {
             // Split aces get one card; they stay open only to resplit.
             h.done = !(h.cards[1].rank === 'A' && this.rules.resplitAces);
           } else if (handTotal(h.cards).total === 21) {
@@ -279,7 +273,7 @@ export class Game {
     while (this.active < this.hands.length) {
       const h = this.hands[this.active];
       // Resplit aces may become impossible once the hand limit is reached.
-      if (!h.done && this.oneCardOnly(h) && !this.available(h).P) h.done = true;
+      if (!h.done && h.splitAces && !this.available(h).P) h.done = true;
       if (!h.done) return;
       this.active++;
     }

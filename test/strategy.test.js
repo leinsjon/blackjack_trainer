@@ -71,10 +71,10 @@ test('EV estimates are close to known values', () => {
   assert.ok(e88.P > e88.S && e88.P > e88.H);
 });
 
-test('one-card split aces do not allow hitting and resplit follows the rule', () => {
+test('split aces do not allow hitting and resplit follows the rule', () => {
   // Deterministic shoe: draws pop from the end.
   for (const rsa of [false, true]) {
-    const g = new Game(rules({ resplitAces: rsa, hitSplitAces: false }));
+    const g = new Game(rules({ resplitAces: rsa }));
     g.deal();
     g.shoe = [c('5'), c('9'), c('A')]; // next draws: A, 9, 5
     g.dealer = [c('7'), c('10')];
@@ -88,29 +88,6 @@ test('one-card split aces do not allow hitting and resplit follows the rule', ()
     assert.equal(av.P, rsa);
     if (!rsa) assert.equal(g.phase, 'over'); // both aces auto-stand
   }
-});
-
-test('split aces can hit and double when the rule allows', () => {
-  const g = new Game(rules({ hitSplitAces: true, das: true }));
-  g.deal();
-  g.shoe = [c('K'), c('3'), c('6'), c('5')]; // next draws: 5, 6, 3, K
-  g.dealer = [c('6'), c('10')];
-  g.hands[0].cards = [c('A'), c('A')];
-  g.hands[0].done = false;
-  g.active = 0;
-  g.phase = 'player';
-  g.act('P'); // hands: A,5 and A,6
-  const av = g.available();
-  assert.equal(av.H, true);
-  assert.equal(av.D, true);
-  assert.equal(g.expected(), 'D'); // soft 16 vs 6
-  g.act('D');
-  assert.equal(g.hands[0].cards.length, 3);
-  assert.equal(g.hands[0].bet, 2);
-  assert.equal(g.phase, 'player'); // second ace still to play
-  const ev = actionEVs([c('A'), c('A')], c('6'), rules({ hitSplitAces: true }), { P: true });
-  const ev1 = actionEVs([c('A'), c('A')], c('6'), rules({ hitSplitAces: false }), { P: true });
-  assert.ok(ev.P > ev1.P);
 });
 
 test('a full round settles and tracks EV lost', () => {
