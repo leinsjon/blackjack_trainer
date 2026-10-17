@@ -4,12 +4,14 @@ import { houseEdge, roundVariance } from './edge.js';
 import { drawSdChart, cumulative } from './sdchart.js';
 import { chipSVG } from './chips.js';
 import { rankMistakes, recentMistakes, mistakeScenario } from './mistakes.js';
+import { initCountTrainer } from './counting.js';
 
 const CHIPS = [5, 25, 100, 500, 1000];
 const DEFAULT_TRAINING = {
   focus: 'all',
   playOut: true,
   autoNext: false,
+  quizEvery: 0, // in-game count quiz every N rounds (0 = off)
   wagers: [0, 100, 0],
   chip: 100,
   bankroll: 10000,
@@ -427,12 +429,26 @@ function setWager(seat, amount) {
   render();
 }
 
+let roundsSinceQuiz = 0;
+
 function deal() {
   clearTimeout(autoTimer);
   if (training.wagers.every((w) => !w)) {
     setFeedback('Place a bet in at least one circle to deal.');
     return;
   }
+  // In-game count quiz: ask before dealing, once enough rounds have gone by
+  // since the last check (and only mid-shoe, when there is a count to keep).
+  if (training.quizEvery > 0 && roundsSinceQuiz >= training.quizEvery && !game.justShuffled && game.phase === 'over') {
+    roundsSinceQuiz = 0;
+    countTrainer.quiz(
+      { rc: game.runningCount, tc: game.trueCount, decksLeft: game.decksRemaining },
+      $('count-quiz'),
+      deal
+    );
+    return;
+  }
+  roundsSinceQuiz++;
   let scenario = null;
   let note = '';
   if (training.focus === 'mistakes') {
@@ -578,6 +594,7 @@ function readSettings() {
     focus: f.focus.value,
     playOut: f.playOut.checked,
     autoNext: f.autoNext.checked,
+    quizEvery: Number(f.quizEvery.value),
     bankroll: Number.isFinite(bankroll) && bankroll >= 0 ? bankroll : training.bankroll,
   };
   return { nextRules, nextTraining };
@@ -905,6 +922,9 @@ $('ms-window').addEventListener('change', (e) => {
   mistakeWindow = e.target.value === 'all' ? null : Number(e.target.value);
   renderMistakeSummary();
 });
+
+const countTrainer = initCountTrainer({ dialog: $('count-trainer') });
+$('learn-count-btn').addEventListener('click', () => countTrainer.open());
 
 $('chart-btn').addEventListener('click', () => {
   renderChart();

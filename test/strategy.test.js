@@ -212,3 +212,31 @@ test('mistakes drill deals the logged situations', async () => {
   }
   assert.equal(mistakeScenario([], 1), null);
 });
+
+test('counting drills and quiz grading', async () => {
+  const { DRILLS, drillCards, countOf, trueCountQuestion, gradeQuiz, passed } = await import('../src/counting.js');
+  const deck = DRILLS.find((d) => d.id === 'deck');
+  for (let i = 0; i < 20; i++) {
+    const cards = drillCards(deck);
+    assert.equal(cards.length, 51);
+    // The missing card's tag is minus the count of the 51 shown.
+    const full = countOf(cards);
+    assert.ok(full >= -1 && full <= 1);
+  }
+  const groups = DRILLS.find((d) => d.id === 'groups');
+  for (let i = 0; i < 20; i++) {
+    const n = drillCards(groups).length;
+    assert.ok(n >= 3 && n <= 5);
+  }
+  for (let i = 0; i < 200; i++) {
+    const q = trueCountQuestion();
+    assert.equal(q.choices.length, 4);
+    assert.ok(q.choices.includes(q.answer));
+    assert.ok(Math.abs(q.answer - q.rc / q.decksLeft) <= 0.25 + 1e-9);
+  }
+  assert.deepEqual(gradeQuiz({ rc: 4, tc: 1.5 }, { rc: 4, tc: 1.9 }), { rcCorrect: true, tcCorrect: true });
+  assert.deepEqual(gradeQuiz({ rc: 3, tc: 1 }, { rc: 4, tc: 1.6 }), { rcCorrect: false, tcCorrect: false });
+  assert.equal(passed('tags', { accuracy: 0.96, avgMs: 800 }), true);
+  assert.equal(passed('tags', { accuracy: 0.96, avgMs: 1400 }), false);
+  assert.equal(passed('deck', { accuracy: 1, ms: 28000 }), true);
+});

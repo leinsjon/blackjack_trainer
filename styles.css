@@ -454,3 +454,56 @@ dialog h3 { font-size: 0.85rem; margin: 14px 0 6px; color: var(--muted); }
 .ms-times b { display: block; font-size: 1rem; }
 .ms-times small { color: var(--muted); font-size: 0.68rem; }
 .mistake-table .num { text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Learn to count */
+.ct { width: min(640px, calc(100vw - 16px)); }
+.ct-body { margin-top: 6px; }
+.ct-lesson { margin: 4px 0 14px; line-height: 1.5; font-size: 0.92rem; }
+.ct-lesson h3 { color: var(--gold); font-size: 0.95rem; margin: 10px 0 4px; }
+.ct-lesson p { margin: 6px 0; }
+.ct-tags { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; text-align: center; }
+.ct-tags div { background: rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 10px 4px; }
+.ct-tags b { display: block; font-size: 1.4rem; }
+.ct-tags span { color: var(--muted); font-size: 0.8rem; letter-spacing: 0.04em; }
+.ct-drills { list-style: none; margin: 0; padding: 0; }
+.ct-drill { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 10px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin: 8px 0; }
+.ct-drill.next { border-color: var(--gold); background: rgba(242, 201, 76, 0.06); }
+.ct-drill .btn { padding: 10px 16px; }
+.ct-drill-title { font-weight: 800; }
+.ct-drill-blurb { font-size: 0.84rem; margin: 3px 0; line-height: 1.35; }
+.ct-drill-meta { font-size: 0.75rem; color: var(--muted); }
+.ct-pass { font-size: 0.68rem; background: var(--good); color: #052e12; border-radius: 4px; padding: 1px 5px; margin-left: 4px; vertical-align: 2px; }
+.ct-run { display: flex; flex-direction: column; gap: 12px; }
+.ct-run-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.82rem; }
+.ct-prompt { min-height: 140px; display: grid; place-items: center; border-radius: 14px; background: radial-gradient(ellipse at 50% 40%, var(--felt), var(--felt-dark) 90%); border: 0; padding: 16px; }
+.ct-prompt .card, .ct-deck .card { --cw: 72px; --ch: 102px; }
+.ct-cards .card + .card { margin-left: 8px; }
+.ct-answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 8px; }
+.ct-answers.wide { grid-template-columns: repeat(6, 1fr); }
+.ct-answers .btn { background: rgba(255, 255, 255, 0.1); }
+.ct-answers .btn.deal { background: linear-gradient(#f9d976, #e0a82e); }
+.ct-ans.right { background: var(--good) !important; color: #052e12; }
+.ct-ans.wrong { background: var(--bad) !important; color: #3b0606; }
+.ct-fb { min-height: 1.5em; text-align: center; font-size: 0.9rem; }
+.ct-fb.good { color: var(--good); }
+.ct-fb.bad { color: #fecaca; }
+.ct-tc { display: flex; gap: 28px; text-align: center; }
+.ct-tc small { display: block; color: var(--muted); font-size: 0.75rem; }
+.ct-tc b { font-size: 2rem; }
+.ct-deck { cursor: pointer; width: 100%; }
+.ct-stepper { display: flex; justify-content: center; align-items: center; gap: 18px; }
+.ct-stepper .btn { width: 64px; font-size: 1.4rem; }
+.ct-val { font-size: 2.2rem; font-weight: 800; min-width: 70px; text-align: center; font-variant-numeric: tabular-nums; }
+.ct-submit { align-self: center; padding: 12px 36px; }
+.ct-summary { padding: 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); }
+.ct-summary.good { background: rgba(74, 222, 128, 0.12); }
+.ct-summary b { font-size: 1.1rem; }
+.ct-spark { display: inline-flex; align-items: flex-end; gap: 2px; height: 20px; }
+.ct-spark i { display: block; width: 5px; background: var(--muted); border-radius: 1px; }
+.ct-spark i.ok { background: var(--good); }
+.ct-quiz-log { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; }
+.ct-quiz-log li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 5px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+#count-quiz { width: min(420px, calc(100vw - 24px)); }
+.cq-field { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; font-weight: 600; }
+.cq-field input { font: inherit; width: 7em; padding: 8px; border-radius: 8px; text-align: center; font-size: 1.1rem; }
+.cq-fb p { margin: 4px 0; font-weight: 700; }

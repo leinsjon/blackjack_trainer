@@ -18,6 +18,7 @@
       <button type="button" class="pill-btn" id="chart-btn">Chart</button>
       <button type="button" class="pill-btn" id="session-btn">Session</button>
       <button type="button" class="pill-btn" id="mistakes-btn">Mistakes</button>
+      <button type="button" class="pill-btn" id="learn-count-btn">Learn to count</button>
       <button type="button" class="pill-btn" id="settings-btn">Rules</button>
       <button type="button" class="pill-btn" id="new-session-btn">New session</button>
     </nav>
@@ -130,6 +131,14 @@
         </select>
       </label>
       <label class="check"><input type="checkbox" name="playOut"> Play each hand to the end</label>
+      <label>In-game count quiz
+        <select name="quizEvery">
+          <option value="0">Off</option>
+          <option value="3">Every 3 rounds</option>
+          <option value="5">Every 5 rounds</option>
+          <option value="10">Every 10 rounds</option>
+        </select>
+      </label>
       <label class="check"><input type="checkbox" name="autoNext"> Deal next round automatically when every decision was correct</label>
       <label>Starting bankroll
         <input type="number" name="bankroll" min="0" step="100" inputmode="numeric">
@@ -158,6 +167,34 @@
       <span class="c-Rs">Rs</span> Surrender, else stand
       <span class="c-Rp">Rp</span> Surrender, else split
     </p>
+  </dialog>
+
+  <dialog id="count-trainer" class="ct">
+    <div class="dialog-head">
+      <h2>Learn to count cards</h2>
+      <button type="button" class="pill-btn ct-close">Close</button>
+    </div>
+    <div class="ms-sort" role="group" aria-label="Section">
+      <button type="button" class="pill-btn" data-ct-tab="learn">Guide</button>
+      <button type="button" class="pill-btn" data-ct-tab="drills">Drills</button>
+      <button type="button" class="pill-btn" data-ct-tab="progress">Progress</button>
+    </div>
+    <div class="ct-body"></div>
+  </dialog>
+
+  <dialog id="count-quiz">
+    <form>
+      <h2>Count check</h2>
+      <p class="note">What's the count right now? Include every card you've seen since the shuffle, dealer hole cards too.</p>
+      <label class="cq-field">Running count <input name="rc" type="number" step="1" inputmode="numeric" autocomplete="off"></label>
+      <label class="cq-field">True count <input name="tc" type="number" step="0.5" inputmode="decimal" autocomplete="off"></label>
+      <p class="note cq-decks"></p>
+      <div class="cq-fb" aria-live="polite"></div>
+      <div class="dialog-actions end">
+        <button type="submit" class="btn deal cq-check">Check</button>
+        <button type="button" class="btn deal cq-continue" hidden>Continue</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="mistake-summary">
