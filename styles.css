@@ -79,7 +79,7 @@ kbd { font: inherit; font-size: 0.62rem; opacity: 0.55; font-weight: 400; }
 /* Stats */
 .stats {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1px;
   margin: 4px 16px 10px;
   border-radius: var(--radius);
@@ -404,3 +404,28 @@ dialog h2 { margin: 10px 0 10px; font-size: 1rem; color: var(--gold); }
 .c-Ds { background: #1e40af; color: #fff; }
 .c-P { background: #f59e0b; color: #2b1d00; }
 .c-Rh, .c-Rs, .c-Rp { background: #64748b; color: #fff; }
+
+@media (min-width: 640px) { .stats { grid-template-columns: repeat(6, 1fr); } }
+.summary dd small { color: var(--muted); font-weight: 400; }
+
+/* Standard deviation charts */
+.sd-chart { margin: 4px 0 18px; }
+.sd-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+.sd-legend .sw { display: inline-block; width: 14px; height: 10px; margin-right: 5px; vertical-align: -1px; border-radius: 2px; }
+.sw.actual { height: 2px; background: var(--gold); vertical-align: 3px; }
+.sw.center { height: 0; border-top: 2px dashed #cbd5e1; vertical-align: 3px; border-radius: 0; }
+.sw.b1 { background: rgba(96, 165, 250, 0.35); }
+.sw.b2 { background: rgba(96, 165, 250, 0.15); }
+.sd-plot { position: relative; }
+.sd-plot svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.sd-grid { stroke: rgba(255, 255, 255, 0.08); stroke-width: 1; }
+.sd-grid.zero { stroke: rgba(255, 255, 255, 0.28); }
+.sd-tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.sd-band.b1 { fill: rgba(96, 165, 250, 0.30); }
+.sd-band.b2 { fill: rgba(96, 165, 250, 0.13); }
+.sd-center { fill: none; stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.sd-actual { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linejoin: round; }
+.sd-dot { fill: var(--gold); stroke: var(--panel); stroke-width: 2; }
+.sd-cross { stroke: rgba(255, 255, 255, 0.5); stroke-width: 1; }
+.sd-tip { position: absolute; top: 4px; transform: translateX(-50%); background: #05110b; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 8px; font-size: 0.75rem; line-height: 1.35; pointer-events: none; white-space: nowrap; }
+.sd-read { font-size: 0.82rem; margin: 6px 0 0; }

@@ -131,3 +131,25 @@ test('running count tracks every revealed card', () => {
   while (g2.shoe.length) g2.draw();
   assert.equal(g2.runningCount, 0);
 });
+
+test('outcome moments and house edge', async () => {
+  const { actionMoments } = await import('../src/ev.js');
+  const { houseEdge, roundVariance } = await import('../src/edge.js');
+  const m = actionMoments([c('10'), c('K')], c('10'), rules(), { S: true });
+  assert.ok(m.S.m2 > 0.55 && m.S.m2 < 0.75, `stand m2 ${m.S.m2}`);
+  const d = actionMoments([c('6'), c('5')], c('6'), rules(), { D: true });
+  assert.ok(d.D.m2 > 3 && d.D.m2 <= 4);
+  const he = houseEdge(rules());
+  assert.ok(he > 0.002 && he < 0.006, `6D S17 DAS LS edge ${he}`);
+  assert.ok(houseEdge(rules({ blackjackPays: '6:5' })) > he + 0.01);
+  assert.ok(Math.abs(roundVariance([100]) - 13225) < 1);
+  const g = new Game(rules());
+  let rounds = 0;
+  while (rounds < 30) {
+    g.deal({ wagers: [100, 50] });
+    if (g.phase === 'over') continue;
+    while (g.phase === 'player') g.act(g.expected());
+    assert.ok(g.variance > 0);
+    rounds++;
+  }
+});

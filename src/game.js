@@ -7,7 +7,7 @@ import {
   describeHand,
   doubleAllowedForTotal,
 } from './strategy.js';
-import { actionEVs } from './ev.js';
+import { actionMoments } from './ev.js';
 
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const SUITS = ['♠', '♥', '♦', '♣'];
@@ -197,12 +197,17 @@ export class Game {
     const hand = this.hand;
     const expected = this.expected();
     const visible = this.hands.flatMap((h) => h.cards).concat([this.dealer[0]]);
-    const evs = actionEVs(hand.cards, this.dealer[0], this.rules, av, visible);
+    const moments = actionMoments(hand.cards, this.dealer[0], this.rules, av, visible);
+    const evs = Object.fromEntries(Object.entries(moments).map(([a, m]) => [a, m.ev]));
     // Money at risk on this decision: the wager times any doubling so far.
     const stake = hand.bet * hand.wager;
     const evLost = Math.max(0, evs[expected] - evs[action]) * stake;
     const seat = this.seatState(hand.seat);
-    if (seat.bookEV === null) seat.bookEV = evs[expected] * hand.wager;
+    if (seat.bookEV === null) {
+      const m = moments[expected];
+      seat.bookEV = m.ev * hand.wager;
+      seat.bookVar = (m.m2 - m.ev * m.ev) * hand.wager * hand.wager;
+    }
     seat.evLost += evLost;
 
     const feedback = {
@@ -260,7 +265,7 @@ export class Game {
   }
 
   seatState(seat) {
-    if (!this.seatStats.has(seat)) this.seatStats.set(seat, { bookEV: null, evLost: 0 });
+    if (!this.seatStats.has(seat)) this.seatStats.set(seat, { bookEV: null, bookVar: 0, evLost: 0 });
     return this.seatStats.get(seat);
   }
 
@@ -291,6 +296,15 @@ export class Game {
         total += s.bookEV - s.evLost;
       }
     }
+    return total;
+  }
+
+  // Variance of the round's result in dollars², given the cards dealt and
+  // book play from each seat's first decision. Seats are treated as
+  // independent; seats settled by a blackjack before any decision add none.
+  computeVariance() {
+    let total = 0;
+    for (const s of this.seatStats.values()) total += s.bookVar;
     return total;
   }
 
@@ -336,6 +350,7 @@ export class Game {
       return { outcome, net: units * stake };
     });
     this.expectedNet = this.computeExpected();
+    this.variance = this.computeVariance();
   }
 }
 

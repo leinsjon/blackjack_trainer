@@ -1,5 +1,7 @@
 import { DEFAULT_RULES, ACTION_NAMES, handTotal, buildChart } from './strategy.js';
 import { Game, SEATS } from './game.js';
+import { houseEdge, roundVariance } from './edge.js';
+import { drawSdChart, cumulative } from './sdchart.js';
 
 const CHIPS = [5, 25, 100, 500, 1000];
 const DEFAULT_TRAINING = {
@@ -21,9 +23,12 @@ const EMPTY_STATS = {
   net: 0,
   expected: 0,
   evLost: 0,
+  edgeCost: 0, // expected loss to the house edge with perfect play
+  history: [], // per settled round: net, expected and variance
   mistakes: [],
 };
 const MAX_MISTAKES = 100;
+const MAX_HISTORY = 10000;
 
 const $ = (id) => document.getElementById(id);
 
@@ -51,6 +56,7 @@ if (!Array.isArray(training.wagers) || training.wagers.length !== SEATS) {
 }
 let stats = load('bj.stats', EMPTY_STATS);
 stats.mistakes = Array.isArray(stats.mistakes) ? stats.mistakes : [];
+stats.history = Array.isArray(stats.history) ? stats.history : [];
 
 const game = new Game(rules);
 let countVisible = false; // the count starts masked on every visit
@@ -308,6 +314,7 @@ function renderStats() {
   setMoney($('stat-net'), stats.net);
   setMoney($('stat-expected'), stats.expected);
   $('stat-lost').textContent = money(stats.evLost, false);
+  $('stat-edge').textContent = money(stats.edgeCost, false);
   $('stat-lost').classList.toggle('neg', stats.evLost > 0.005);
   $('stat-accuracy').textContent = stats.decisions
     ? `${Math.round((stats.correct / stats.decisions) * 100)}%`
@@ -361,6 +368,19 @@ function finishRound(prefix = '') {
     stats.hands += new Set(game.hands.map((h) => h.seat)).size;
     stats.net += net;
     stats.expected += game.expectedNet;
+    const wagers = [...new Map(game.hands.map((h) => [h.seat, h.wager])).values()];
+    const edgeExpected = -houseEdge(rules) * wagers.reduce((a, b) => a + b, 0);
+    stats.edgeCost -= edgeExpected;
+    const r2 = (v) => Math.round(v * 100) / 100;
+    if (stats.history.length < MAX_HISTORY) {
+      stats.history.push({
+        net: r2(net),
+        exp: r2(game.expectedNet),
+        var: r2(game.variance),
+        hexp: r2(edgeExpected),
+        hvar: r2(roundVariance(wagers)),
+      });
+    }
     save('bj.stats', stats);
     const last = roundMessages.at(-1);
     const decided = last ? `${last.html} ` : '';
@@ -476,6 +496,10 @@ function renderChart() {
     table('Hard totals', chart.hard) + table('Soft totals', chart.soft) + table('Pairs', chart.pairs);
 }
 
+function perHand(amount) {
+  return stats.hands ? ` <small>(${money(amount / stats.hands, false)}/hand)</small>` : '';
+}
+
 function renderSession() {
   const rows = [
     ['Rounds played', String(stats.rounds)],
@@ -484,9 +508,14 @@ function renderSession() {
     ['Best streak', String(stats.best)],
     ['Net winnings', money(stats.net)],
     ['Expected (your play)', money(stats.expected)],
-    ['EV lost to mistakes', money(stats.evLost, false)],
+    ['House edge for these rules', `${(houseEdge(rules) * 100).toFixed(2)}%`],
+    ['EV lost to house edge (perfect play)', `${money(stats.edgeCost, false)}${perHand(stats.edgeCost)}`],
+    ['EV lost to mistakes', `${money(stats.evLost, false)}${perHand(stats.evLost)}`],
+    ['Total EV lost', `${money(stats.edgeCost + stats.evLost, false)}${perHand(stats.edgeCost + stats.evLost)}`],
     ['Luck (net − expected)', money(stats.net - stats.expected)],
   ];
+  drawSdChart($('sd-dealt'), cumulative(stats.history, 'exp', 'var'), { label: 'Net vs cards dealt' });
+  drawSdChart($('sd-blind'), cumulative(stats.history, 'hexp', 'hvar'), { label: 'Net vs hands and stakes' });
   $('session-summary').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   if (stats.mistakes.length === 0) {
     $('mistakes').innerHTML = '<p class="note">No mistakes yet.</p>';
@@ -547,9 +576,10 @@ const openSession = () => {
 };
 $('session-btn').addEventListener('click', openSession);
 $('stat-lost').addEventListener('click', openSession);
+$('stat-edge').addEventListener('click', openSession);
 $('session-close').addEventListener('click', () => $('session').close());
 $('reset-stats').addEventListener('click', () => {
-  stats = { ...EMPTY_STATS, mistakes: [] };
+  stats = { ...EMPTY_STATS, mistakes: [], history: [] };
   save('bj.stats', stats);
   renderStats();
   renderSession();

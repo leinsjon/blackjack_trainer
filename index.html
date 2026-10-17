@@ -24,7 +24,8 @@
   <section class="stats" aria-label="Session stats">
     <div><small>Net</small><span id="stat-net">$0</span></div>
     <div><small>Expected</small><span id="stat-expected">$0</span></div>
-    <div><small>EV lost</small><button type="button" class="stat-link" id="stat-lost">$0</button></div>
+    <div><small>Edge cost</small><button type="button" class="stat-link" id="stat-edge">$0</button></div>
+    <div><small>Mistakes</small><button type="button" class="stat-link" id="stat-lost">$0</button></div>
     <div><small>Accuracy</small><span id="stat-accuracy">–</span></div>
     <div><small>Streak</small><span id="stat-streak">0</span></div>
   </section>
@@ -163,6 +164,12 @@
     </div>
     <dl class="summary" id="session-summary"></dl>
     <p class="note">Expected is what your decisions were worth on average: the book-play EV of each hand you were dealt, minus the EV your mistakes gave up. Net minus Expected is luck. EVs are estimates from the shoe composition and current rules. With &ldquo;play each hand to the end&rdquo; off, mistakes still count toward EV lost but hands are not settled.</p>
+    <h2>Net vs the cards you were dealt</h2>
+    <p class="note">Expected and σ come from each hand's actual cards and dealer upcard, assuming book play from your first decision (mistakes lower the expected line). Hands at the same table are treated as independent here.</p>
+    <div class="sd-chart" id="sd-dealt"></div>
+    <h2>Net vs hands and stakes only</h2>
+    <p class="note">Before any cards are known: expected = −house edge × amount bet, σ ≈ 1.15 × bet per hand, with 0.48 correlation between hands in the same round.</p>
+    <div class="sd-chart" id="sd-blind"></div>
     <h2>Mistakes</h2>
     <div id="mistakes"></div>
     <div class="dialog-actions">
