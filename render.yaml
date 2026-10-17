@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: blackjack-trainer
+    runtime: static
+    buildCommand: echo "static site, no build"
+    staticPublishPath: .

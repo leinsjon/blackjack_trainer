@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a1f17">
+  <meta name="description" content="Practice blackjack basic strategy with configurable table rules.">
+  <title>Blackjack Trainer</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">♠</span> Blackjack Trainer</div>
+    <div class="balance"><small>Balance</small><span id="balance">$10,000</span></div>
+    <nav class="top-actions">
+      <button type="button" class="pill-btn" id="chart-btn">Chart</button>
+      <button type="button" class="pill-btn" id="session-btn">Session</button>
+      <button type="button" class="pill-btn" id="settings-btn">Rules</button>
+    </nav>
+  </header>
+
+  <section class="stats" aria-label="Session stats">
+    <div><small>Net</small><span id="stat-net">$0</span></div>
+    <div><small>Expected</small><span id="stat-expected">$0</span></div>
+    <div><small>EV lost</small><button type="button" class="stat-link" id="stat-lost">$0</button></div>
+    <div><small>Accuracy</small><span id="stat-accuracy">–</span></div>
+    <div><small>Streak</small><span id="stat-streak">0</span></div>
+  </section>
+
+  <main class="table-wrap">
+    <div class="table" id="table">
+      <button type="button" class="count masked" id="count" aria-pressed="false" aria-label="Show card count">
+        <span class="count-label">Count</span>
+        <span class="count-value" id="count-value">• • •</span>
+      </button>
+      <div class="shoe" aria-label="Cards left in shoe">
+        <div class="shoe-box"><div class="shoe-fill" id="shoe-fill"></div></div>
+        <small id="shoe-label">Shoe</small>
+      </div>
+
+      <div class="dealer">
+        <div class="cards" id="dealer-cards"></div>
+        <div class="total-badge" id="dealer-total" hidden></div>
+      </div>
+
+      <div class="felt-print">
+        <div class="felt-main" id="felt-main">BLACKJACK PAYS 3 TO 2</div>
+        <div class="felt-sub" id="felt-sub">Dealer stands on all 17s</div>
+      </div>
+
+      <div class="seats" id="seats"></div>
+    </div>
+  </main>
+
+  <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+
+  <footer class="controls">
+    <div class="betting" id="betting">
+      <div class="chip-tray" id="chip-tray" role="radiogroup" aria-label="Chip value"></div>
+      <div class="bet-buttons">
+        <button type="button" class="btn ghost" id="clear-bets">Clear</button>
+        <button type="button" class="btn deal" id="deal-btn">Deal<kbd>Space</kbd></button>
+      </div>
+      <p class="hint">Pick a chip, then tap a betting circle. Bet up to three hands.</p>
+    </div>
+    <nav class="actions" id="actions" hidden>
+      <button type="button" class="btn act" data-action="H">Hit<kbd>H</kbd></button>
+      <button type="button" class="btn act" data-action="S">Stand<kbd>S</kbd></button>
+      <button type="button" class="btn act" data-action="D">Double<kbd>D</kbd></button>
+      <button type="button" class="btn act" data-action="P">Split<kbd>P</kbd></button>
+      <button type="button" class="btn act" data-action="R">Surrender<kbd>R</kbd></button>
+    </nav>
+  </footer>
+
+  <dialog id="settings">
+    <form method="dialog" id="settings-form">
+      <h2>Table rules</h2>
+      <label>Decks
+        <select name="decks">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+      <label>Dealer soft 17
+        <select name="h17">
+          <option value="false">Stands (S17)</option>
+          <option value="true">Hits (H17)</option>
+        </select>
+      </label>
+      <label>Double down on
+        <select name="doubleOn">
+          <option value="any">Any two cards</option>
+          <option value="9-11">9, 10 or 11 only</option>
+          <option value="10-11">10 or 11 only</option>
+        </select>
+      </label>
+      <label>Max hands after splitting
+        <select name="maxHands">
+          <option value="2">2 (no resplit)</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+      </label>
+      <label>Blackjack pays
+        <select name="blackjackPays">
+          <option value="3:2">3 to 2</option>
+          <option value="6:5">6 to 5</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" name="das"> Double after split</label>
+      <label class="check"><input type="checkbox" name="resplitAces"> Resplit aces</label>
+      <label class="check"><input type="checkbox" name="surrender"> Late surrender</label>
+
+      <h2>Training</h2>
+      <label>Hands to practice
+        <select name="focus">
+          <option value="all">Everything (dealt from the shoe)</option>
+          <option value="hard">Hard totals</option>
+          <option value="soft">Soft totals</option>
+          <option value="pairs">Pairs</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" name="playOut"> Play each hand to the end</label>
+      <label class="check"><input type="checkbox" name="autoNext"> Deal next round automatically when every decision was correct</label>
+      <label>Starting bankroll
+        <input type="number" name="bankroll" min="0" step="100" inputmode="numeric">
+      </label>
+
+      <div class="dialog-actions end">
+        <button type="submit" class="btn deal" value="save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="chart">
+    <div class="dialog-head">
+      <h2>Basic strategy</h2>
+      <button type="button" class="pill-btn" id="chart-close">Close</button>
+    </div>
+    <p class="note" id="chart-rules"></p>
+    <div id="chart-body"></div>
+    <p class="legend">
+      <span class="c-H">H</span> Hit
+      <span class="c-S">S</span> Stand
+      <span class="c-D">D</span> Double, else hit
+      <span class="c-Ds">Ds</span> Double, else stand
+      <span class="c-P">P</span> Split
+      <span class="c-Rh">Rh</span> Surrender, else hit
+      <span class="c-Rs">Rs</span> Surrender, else stand
+      <span class="c-Rp">Rp</span> Surrender, else split
+    </p>
+  </dialog>
+
+  <dialog id="session">
+    <div class="dialog-head">
+      <h2>This session</h2>
+      <button type="button" class="pill-btn" id="session-close">Close</button>
+    </div>
+    <dl class="summary" id="session-summary"></dl>
+    <p class="note">Expected is what your decisions were worth on average: the book-play EV of each hand you were dealt, minus the EV your mistakes gave up. Net minus Expected is luck. EVs are estimates from the shoe composition and current rules. With &ldquo;play each hand to the end&rdquo; off, mistakes still count toward EV lost but hands are not settled.</p>
+    <h2>Mistakes</h2>
+    <div id="mistakes"></div>
+    <div class="dialog-actions">
+      <button type="button" class="pill-btn" id="reset-stats">Start new session</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
