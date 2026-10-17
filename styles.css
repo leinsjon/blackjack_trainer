@@ -173,9 +173,9 @@ kbd { font: inherit; font-size: 0.62rem; opacity: 0.55; font-weight: 400; }
   color: var(--black);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
   font-weight: 800;
-  animation: deal 0.22s ease-out both;
   flex: none;
 }
+.card.dealt { animation: deal 0.22s ease-out both; }
 .card + .card { margin-left: calc(var(--cw) * -0.45); }
 .card.red { color: var(--red); }
 .card .corner { position: absolute; top: 3px; left: 4px; line-height: 0.95; text-align: center; font-size: calc(var(--cw) * 0.3); }
@@ -278,7 +278,8 @@ kbd { font: inherit; font-size: 0.62rem; opacity: 0.55; font-weight: 400; }
 .chip.selected { transform: translateY(-6px); box-shadow: 0 0 0 3px var(--gold), 0 6px 12px rgba(0, 0, 0, 0.6); }
 
 .stack { position: relative; width: 40px; height: 40px; }
-.stack .chip { position: absolute; left: 0; width: 40px; height: 40px; font-size: 0.62rem; animation: chip-in 0.15s ease-out both; }
+.stack .chip { position: absolute; left: 0; width: 40px; height: 40px; font-size: 0.62rem; }
+.stack .chip.added { animation: chip-in 0.15s ease-out both; }
 @keyframes chip-in { from { transform: translateY(-14px); opacity: 0; } }
 
 /* Feedback */

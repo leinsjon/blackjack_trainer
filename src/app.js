@@ -95,15 +95,23 @@ function rulesSummary(r) {
 
 // ---------- rendering ----------
 
+// Cards already on screen. Each render rebuilds the table, so only cards not
+// seen before get the deal animation; a revealed hole card does not re-deal.
+let shownCards = new WeakSet();
+
 function cardEl(card, hidden = false) {
   const el = document.createElement('div');
+  const isNew = !shownCards.has(card);
+  shownCards.add(card);
+  if (isNew) el.classList.add('dealt');
   if (hidden) {
-    el.className = 'card back';
+    el.classList.add('card', 'back');
     el.setAttribute('aria-label', 'Face-down card');
     return el;
   }
   const red = card.suit === '♥' || card.suit === '♦';
-  el.className = `card${red ? ' red' : ''}`;
+  el.classList.add('card');
+  if (red) el.classList.add('red');
   el.setAttribute('aria-label', `${card.rank}${card.suit}`);
   el.innerHTML = `<div class="corner">${card.rank}<span>${card.suit}</span></div><div class="pip">${card.suit}</div>`;
   return el;
@@ -130,7 +138,12 @@ function chipsFor(amount) {
   return out;
 }
 
-function stackEl(amount) {
+// Last amount drawn on each betting circle, so only a changed stack animates.
+const shownStacks = [];
+
+function stackEl(amount, seat) {
+  const changed = shownStacks[seat] !== amount;
+  shownStacks[seat] = amount;
   const stack = document.createElement('div');
   stack.className = 'stack';
   chipsFor(amount)
@@ -138,6 +151,7 @@ function stackEl(amount) {
     .forEach((v, i) => {
       const chip = chipEl(v);
       chip.style.top = `${-i * 4}px`;
+      if (changed) chip.classList.add('added');
       stack.append(chip);
     });
   return stack;
@@ -215,7 +229,7 @@ function render() {
     spot.setAttribute('role', 'button');
     spot.setAttribute('aria-label', `Betting circle ${s + 1}, ${wager ? money(wager, false) : 'no bet'}`);
     if (atRisk > 0) {
-      spot.append(stackEl(atRisk));
+      spot.append(stackEl(atRisk, s));
       const amt = document.createElement('div');
       amt.className = 'spot-amount';
       amt.textContent = money(atRisk, false);
@@ -233,6 +247,7 @@ function render() {
         spot.append(rm);
       }
     } else {
+      shownStacks[s] = 0;
       spot.textContent = 'Bet';
     }
     spot.addEventListener('click', () => {
