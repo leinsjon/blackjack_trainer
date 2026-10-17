@@ -431,7 +431,7 @@ dialog h3 { font-size: 0.85rem; margin: 14px 0 6px; color: var(--muted); }
 .ms-sort .pill-btn[aria-pressed="true"] { background: var(--gold); color: #2b1d00; border-color: var(--gold); }
 .ms-list { list-style: none; margin: 0; padding: 0; }
 .ms-row-wrap { border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.ms-row { cursor: pointer; list-style: none; display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; }
+.ms-row { cursor: pointer; list-style: none; display: grid; grid-template-columns: 26px 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; }
 .ms-rank { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 800; background: rgba(255, 255, 255, 0.1); }
 .ms-row:nth-child(-n+3) .ms-rank { background: #7f1d1d; color: #fecaca; }
 .ms-title { font-weight: 700; font-size: 0.92rem; }
@@ -450,3 +450,7 @@ dialog h3 { font-size: 0.85rem; margin: 14px 0 6px; color: var(--muted); }
 .ms-remove-all { margin: 0 0 10px 36px; font-size: 0.78rem; }
 .archive-item.all-hands { border-color: rgba(242, 201, 76, 0.45); background: rgba(242, 201, 76, 0.05); }
 .archive-item.all-hands .a-date { color: var(--gold); }
+.ms-times { text-align: center; min-width: 40px; font-variant-numeric: tabular-nums; }
+.ms-times b { display: block; font-size: 1rem; }
+.ms-times small { color: var(--muted); font-size: 0.68rem; }
+.mistake-table .num { text-align: center; font-variant-numeric: tabular-nums; }

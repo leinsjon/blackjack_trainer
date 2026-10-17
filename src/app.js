@@ -722,15 +722,17 @@ function sessionRows(s) {
   ];
 }
 
+// Mistakes grouped by situation, action and book play, costliest first.
 function mistakesTable(list) {
   if (!list.length) return '<p class="note">No mistakes.</p>';
+  const rows = rankMistakes(list, 'cost');
   return `
     <table class="mistake-table">
-      <thead><tr><th>Hand</th><th>You</th><th>Book</th><th>EV lost</th></tr></thead>
-      <tbody>${list
+      <thead><tr><th>Hand</th><th>You</th><th>Book</th><th class="num">Times</th><th>EV lost</th></tr></thead>
+      <tbody>${rows
         .map(
-          (m) =>
-            `<tr><td>${m.situation}</td><td>${ACTION_NAMES[m.chose]}</td><td>${ACTION_NAMES[m.book]}</td><td>${money(m.cost, false)}</td></tr>`
+          (r) =>
+            `<tr><td>${r.situation}</td><td>${ACTION_NAMES[r.chose]}</td><td>${ACTION_NAMES[r.book]}</td><td class="num">${r.count}</td><td>${money(r.cost, false)}</td></tr>`
         )
         .join('')}</tbody>
     </table>`;
@@ -742,8 +744,7 @@ const dateFmt = (t) =>
 // Every hand ever played: closed sessions plus the current one.
 function allHandsEntry() {
   const all = addToLifetime(structuredClone(lifetime), stats);
-  const latest = [...mistakeLog].sort((a, b) => (b.hand - a.hand) || ((b.t ?? 0) - (a.t ?? 0)));
-  return { ...all, mistakes: latest.slice(0, 100), totalMistakes: latest.length };
+  return { ...all, mistakes: mistakeLog };
 }
 
 function archiveItem(a, i, { allHands = false } = {}) {
@@ -752,9 +753,6 @@ function archiveItem(a, i, { allHands = false } = {}) {
   const note = allHands
     ? `Every session${a.startedAt ? ` since ${dateFmt(a.startedAt)}` : ''}, including this one. Totals keep counting after old sessions leave the archive.`
     : `${a.rules}${a.houseEdge !== undefined ? ` · house edge ${(a.houseEdge * 100).toFixed(2)}%` : ''}. Ended ${dateFmt(a.endedAt)}.`;
-  const mistakesNote = allHands && a.totalMistakes > a.mistakes.length
-    ? `<p class="note">Latest ${a.mistakes.length} of ${a.totalMistakes}. The Mistakes button ranks them all.</p>`
-    : '';
   return `
       <details class="archive-item${allHands ? ' all-hands' : ''}" data-i="${i}">
         <summary>
@@ -770,7 +768,7 @@ function archiveItem(a, i, { allHands = false } = {}) {
         <h3>Net vs hands and stakes only</h3>
         <div class="sd-chart a-blind"></div>
         <h3>Mistakes</h3>
-        ${mistakesNote}${mistakesTable(a.mistakes || [])}
+        ${mistakesTable(a.mistakes || [])}
       </details>`;
 }
 
@@ -849,8 +847,9 @@ function renderMistakeSummary() {
             <span class="ms-rank">${i + 1}</span>
             <div class="ms-body">
               <div class="ms-title">${r.label}</div>
-              <div class="ms-meta">Book play: <strong>${ACTION_NAMES[r.book]}</strong> · ${r.count}×</div>
+              <div class="ms-meta">Book play: <strong>${ACTION_NAMES[r.book]}</strong></div>
             </div>
+            <div class="ms-times"><b>${r.count}</b><small>times</small></div>
             <div class="ms-cost">
               <div class="ms-impact">−${pct(r.perHand)}</div>
               <div class="ms-sub">${money(r.perHand * 100, false)} per $100 hand</div>
