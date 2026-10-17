@@ -158,21 +158,23 @@ test('outcome moments and house edge', async () => {
   assert.ok(positive > 20);
 });
 
-test('mistake tally groups and ranks by per-hand EV', async () => {
-  const { buildTally, addMistake, rankMistakes } = await import('../src/mistakes.js');
-  const t = buildTally([
-    [
-      { situation: 'Hard 12 vs dealer 3', chose: 'S', book: 'H', cost: 2, stake: 100 },
-      { situation: 'Hard 12 vs dealer 3', chose: 'S', book: 'H', cost: 4, stake: 200 },
-    ],
-    [{ situation: 'Pair of 10s vs dealer 6', chose: 'P', book: 'S', cost: 20, stake: 100 }],
-  ]);
-  addMistake(t, { situation: 'Soft 18 vs dealer 9', chose: 'S', book: 'H', cost: 1, stake: 25 });
-  const rows = rankMistakes(t);
+test('mistake log ranks by per-hand EV and filters recent hands', async () => {
+  const { rankMistakes, recentMistakes } = await import('../src/mistakes.js');
+  const log = [
+    { id: 1, hand: 10, situation: 'Hard 12 vs dealer 3', chose: 'S', book: 'H', cost: 2, stake: 100 },
+    { id: 2, hand: 150, situation: 'Hard 12 vs dealer 3', chose: 'S', book: 'H', cost: 4, stake: 200 },
+    { id: 3, hand: 20, situation: 'Pair of 10s vs dealer 6', chose: 'P', book: 'S', cost: 20, stake: 100 },
+    { id: 4, hand: 200, situation: 'Soft 18 vs dealer 9', chose: 'S', book: 'H', cost: 1, stake: 25 },
+  ];
+  const rows = rankMistakes(log);
   assert.equal(rows[0].label, 'Split pair of 10s vs dealer 6');
   assert.equal(rows[1].label, 'Stood on soft 18 vs dealer 9');
   const h12 = rows.find((r) => r.situation === 'Hard 12 vs dealer 3');
   assert.equal(h12.count, 2);
   assert.ok(Math.abs(h12.perHand - 0.02) < 1e-9);
-  assert.equal(rankMistakes(t, 'count')[0].situation, 'Hard 12 vs dealer 3');
+  assert.deepEqual(h12.entries.map((e) => e.id), [2, 1]);
+  assert.equal(rankMistakes(log, 'count')[0].situation, 'Hard 12 vs dealer 3');
+  // Last 100 of 200 hands: hands 101-200.
+  assert.deepEqual(recentMistakes(log, 200, 100).map((m) => m.id), [2, 4]);
+  assert.equal(recentMistakes(log, 200, null).length, 4);
 });

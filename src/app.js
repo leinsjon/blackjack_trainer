@@ -3,7 +3,7 @@ import { Game, SEATS } from './game.js';
 import { houseEdge, roundVariance } from './edge.js';
 import { drawSdChart, cumulative } from './sdchart.js';
 import { chipSVG } from './chips.js';
-import { addMistake, buildTally, rankMistakes } from './mistakes.js';
+import { rankMistakes, recentMistakes } from './mistakes.js';
 
 const CHIPS = [5, 25, 100, 500, 1000];
 const DEFAULT_TRAINING = {
@@ -63,17 +63,32 @@ stats.startedAt ??= Date.now();
 const MAX_ARCHIVE = 25;
 let archive = loadArchive();
 
-// All-time mistake tally. Built once from saved session logs, then updated
-// on every mistake so it keeps counting past each session's log limit.
-let tally = (() => {
+// All-time hand counter and mistake log, kept across sessions. Mistakes from
+// before the log existed are seeded from the session logs with hand 0, so
+// they only show under "All hands".
+const MAX_LOG = 5000;
+let handCount = Number(localStorage.getItem('bj.handCount')) || 0;
+let mistakeLog = (() => {
   try {
-    const saved = JSON.parse(localStorage.getItem('bj.mistakeTally') || 'null');
-    if (saved && typeof saved === 'object') return saved;
+    const saved = JSON.parse(localStorage.getItem('bj.mistakeLog') || 'null');
+    if (Array.isArray(saved)) return saved;
   } catch {
     // fall through and rebuild
   }
-  return buildTally([stats.mistakes, ...archive.map((a) => a.mistakes)]);
+  let id = 0;
+  return [stats.mistakes, ...archive.map((a) => a.mistakes || [])]
+    .flat()
+    .map((m) => {
+      m.id ??= `legacy-${id++}`;
+      return { ...m, hand: 0 };
+    });
 })();
+let nextMistakeId = Date.now();
+
+function saveMistakes() {
+  save('bj.mistakeLog', mistakeLog);
+  save('bj.stats', stats);
+}
 
 function loadArchive() {
   try {
@@ -376,6 +391,12 @@ function deal() {
     return;
   }
   game.deal({ wagers: training.wagers, focus: training.focus, playOut: training.playOut });
+  handCount += new Set(game.hands.map((h) => h.seat)).size;
+  try {
+    localStorage.setItem('bj.handCount', String(handCount));
+  } catch {
+    // storage unavailable
+  }
   roundAllCorrect = true;
   roundMessages = [];
   const shuffled = game.justShuffled ? 'New shoe shuffled. ' : '';
@@ -453,16 +474,21 @@ function act(action) {
     html =
       `✗ You chose ${ACTION_NAMES[fb.action]}; book play is <strong>${name}</strong> on ${fb.situation}. ` +
       `Cost ${money(fb.evLost, false)} in EV (${ACTION_NAMES[fb.action]} ${ev(fb.action)} vs ${name} ${ev(fb.expected)}).`;
-    stats.mistakes.unshift({
+    const mistake = {
+      id: `m${nextMistakeId++}`,
+      hand: handCount,
+      t: Date.now(),
       situation: fb.situation,
       chose: fb.action,
       book: fb.expected,
       cost: fb.evLost,
       stake: fb.stake,
-    });
+    };
+    stats.mistakes.unshift(mistake);
     stats.mistakes.length = Math.min(stats.mistakes.length, MAX_MISTAKES);
-    addMistake(tally, stats.mistakes[0]);
-    save('bj.mistakeTally', tally);
+    mistakeLog.push(mistake);
+    if (mistakeLog.length > MAX_LOG) mistakeLog.splice(0, mistakeLog.length - MAX_LOG);
+    save('bj.mistakeLog', mistakeLog);
   }
   const tone = fb.correct ? 'good' : 'bad';
   roundMessages.push({ html, tone });
@@ -704,39 +730,100 @@ function renderArchive() {
 }
 
 let mistakeSort = 'impact';
+let mistakeWindow = 100; // last N hands; null = all
+const openGroups = new Set();
+
+// Removes mistakes (misclicks) from the all-time log. Ones from the current
+// session also come off its stats: they count as correct decisions and their
+// EV cost is refunded. Archived session totals are left as they were.
+function purgeMistakes(ids) {
+  const remove = new Set(ids);
+  mistakeLog = mistakeLog.filter((m) => !remove.has(m.id));
+  const kept = [];
+  for (const m of stats.mistakes) {
+    if (remove.has(m.id)) {
+      stats.correct += 1;
+      stats.evLost = Math.max(0, stats.evLost - m.cost);
+      stats.expected += m.cost;
+    } else {
+      kept.push(m);
+    }
+  }
+  stats.mistakes = kept;
+  saveMistakes();
+  renderStats();
+  renderMistakeSummary();
+}
 
 function renderMistakeSummary() {
-  const rows = rankMistakes(tally, mistakeSort);
-  const total = rows.reduce((s, r) => s + r.count, 0);
+  const entries = recentMistakes(mistakeLog, handCount, mistakeWindow);
+  const rows = rankMistakes(entries, mistakeSort);
+  const total = entries.length;
   const cost = rows.reduce((s, r) => s + r.cost, 0);
+  const span = mistakeWindow == null ? 'across all hands' : `in your last ${Math.min(mistakeWindow, handCount)} hands`;
   $('ms-total').textContent = total
-    ? `${total} mistake${total === 1 ? '' : 's'} in ${rows.length} situation${rows.length === 1 ? '' : 's'}, ${money(cost, false)} of EV lost in all.`
+    ? `${total} mistake${total === 1 ? '' : 's'} ${span} in ${rows.length} situation${rows.length === 1 ? '' : 's'}, ${money(cost, false)} of EV lost.`
     : '';
   for (const b of document.querySelectorAll('[data-sort]')) {
     b.setAttribute('aria-pressed', String(b.dataset.sort === mistakeSort));
   }
+  $('ms-window').value = mistakeWindow == null ? 'all' : String(mistakeWindow);
   if (!rows.length) {
-    $('ms-list').innerHTML = '<p class="note">No mistakes yet. Nice.</p>';
+    $('ms-list').innerHTML = `<p class="note">No mistakes ${span}.</p>`;
     return;
   }
   const pct = (x) => `${(x * 100).toFixed(x * 100 >= 10 ? 0 : 1)}%`;
+  const when = (m) =>
+    m.t ? new Date(m.t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Earlier';
   $('ms-list').innerHTML = rows
     .map(
       (r, i) => `
-      <li class="ms-row">
-        <span class="ms-rank">${i + 1}</span>
-        <div class="ms-body">
-          <div class="ms-title">${r.label}</div>
-          <div class="ms-meta">Book play: <strong>${ACTION_NAMES[r.book]}</strong> · ${r.count}×</div>
-        </div>
-        <div class="ms-cost">
-          <div class="ms-impact">−${pct(r.perHand)}</div>
-          <div class="ms-sub">${money(r.perHand * 100, false)} per $100 hand</div>
-          <div class="ms-sub">${money(r.cost, false)} total</div>
-        </div>
+      <li class="ms-row-wrap">
+        <details class="ms-group" data-key="${r.key}" ${openGroups.has(r.key) ? 'open' : ''}>
+          <summary class="ms-row">
+            <span class="ms-rank">${i + 1}</span>
+            <div class="ms-body">
+              <div class="ms-title">${r.label}</div>
+              <div class="ms-meta">Book play: <strong>${ACTION_NAMES[r.book]}</strong> · ${r.count}×</div>
+            </div>
+            <div class="ms-cost">
+              <div class="ms-impact">−${pct(r.perHand)}</div>
+              <div class="ms-sub">${money(r.perHand * 100, false)} per $100 hand</div>
+              <div class="ms-sub">${money(r.cost, false)} total</div>
+            </div>
+          </summary>
+          <ul class="ms-entries">
+            ${r.entries
+              .map(
+                (m) => `
+              <li>
+                <span>${when(m)}${m.hand ? ` · hand ${m.hand}` : ''}</span>
+                <span>${money(m.stake, false)} bet · ${money(m.cost, false)}</span>
+                <button type="button" class="ms-remove" data-id="${m.id}" aria-label="Remove this mistake">Remove</button>
+              </li>`
+              )
+              .join('')}
+          </ul>
+          ${r.count > 1 ? `<button type="button" class="pill-btn ms-remove-all" data-key="${r.key}">Remove all ${r.count} (misclicks)</button>` : ''}
+        </details>
       </li>`
     )
     .join('');
+
+  $('ms-list').querySelectorAll('details').forEach((d) =>
+    d.addEventListener('toggle', () => (d.open ? openGroups.add(d.dataset.key) : openGroups.delete(d.dataset.key)))
+  );
+  $('ms-list').querySelectorAll('.ms-remove').forEach((b) =>
+    b.addEventListener('click', () => purgeMistakes([b.dataset.id]))
+  );
+  $('ms-list').querySelectorAll('.ms-remove-all').forEach((b) =>
+    b.addEventListener('click', () => {
+      const row = rows.find((r) => r.key === b.dataset.key);
+      if (row && window.confirm(`Remove all ${row.count} "${row.label}" mistakes shown?`)) {
+        purgeMistakes(row.entries.map((m) => m.id));
+      }
+    })
+  );
 }
 
 $('mistakes-btn').addEventListener('click', () => {
@@ -750,6 +837,10 @@ document.querySelectorAll('[data-sort]').forEach((b) =>
     renderMistakeSummary();
   })
 );
+$('ms-window').addEventListener('change', (e) => {
+  mistakeWindow = e.target.value === 'all' ? null : Number(e.target.value);
+  renderMistakeSummary();
+});
 
 $('chart-btn').addEventListener('click', () => {
   renderChart();

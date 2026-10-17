@@ -164,12 +164,22 @@
       <h2>Your most costly mistakes</h2>
       <button type="button" class="pill-btn" id="ms-close">Close</button>
     </div>
-    <p class="note">Every session, archived ones included. EV impact is how much of the bet each mistake gives up on average versus book play.</p>
+    <p class="note">Every session, archived ones included. EV impact is how much of the bet each mistake gives up on average versus book play. Tap a mistake to see each time it happened and remove misclicks.</p>
     <div class="ms-sort" role="group" aria-label="Sort mistakes by">
       <button type="button" class="pill-btn" data-sort="impact">EV per hand</button>
       <button type="button" class="pill-btn" data-sort="count">Most frequent</button>
       <button type="button" class="pill-btn" data-sort="cost">Total cost</button>
     </div>
+    <label class="ms-filter">Show
+      <select id="ms-window">
+        <option value="50">Last 50 hands</option>
+        <option value="100" selected>Last 100 hands</option>
+        <option value="250">Last 250 hands</option>
+        <option value="500">Last 500 hands</option>
+        <option value="1000">Last 1,000 hands</option>
+        <option value="all">All hands</option>
+      </select>
+    </label>
     <p class="note" id="ms-total"></p>
     <ol class="ms-list" id="ms-list"></ol>
   </dialog>

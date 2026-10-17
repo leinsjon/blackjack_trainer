@@ -430,7 +430,8 @@ dialog h3 { font-size: 0.85rem; margin: 14px 0 6px; color: var(--muted); }
 .ms-sort { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
 .ms-sort .pill-btn[aria-pressed="true"] { background: var(--gold); color: #2b1d00; border-color: var(--gold); }
 .ms-list { list-style: none; margin: 0; padding: 0; }
-.ms-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.ms-row-wrap { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.ms-row { cursor: pointer; list-style: none; display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; }
 .ms-rank { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 800; background: rgba(255, 255, 255, 0.1); }
 .ms-row:nth-child(-n+3) .ms-rank { background: #7f1d1d; color: #fecaca; }
 .ms-title { font-weight: 700; font-size: 0.92rem; }
@@ -439,3 +440,11 @@ dialog h3 { font-size: 0.85rem; margin: 14px 0 6px; color: var(--muted); }
 .ms-cost { text-align: right; font-variant-numeric: tabular-nums; }
 .ms-impact { color: var(--bad); font-weight: 800; font-size: 1rem; }
 .ms-sub { color: var(--muted); font-size: 0.72rem; white-space: nowrap; }
+.ms-row::-webkit-details-marker { display: none; }
+.ms-group[open] .ms-row .ms-title { color: var(--gold); }
+.ms-filter { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); }
+.ms-filter select { font: inherit; padding: 6px 8px; border-radius: 8px; }
+.ms-entries { list-style: none; margin: 0 0 8px 36px; padding: 0; font-size: 0.78rem; color: var(--muted); }
+.ms-entries li { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px dashed rgba(255, 255, 255, 0.08); }
+.ms-remove { background: rgba(248, 113, 113, 0.15); color: #fecaca; border: 1px solid rgba(248, 113, 113, 0.4); border-radius: 999px; padding: 3px 10px; font-size: 0.75rem; font-weight: 600; }
+.ms-remove-all { margin: 0 0 10px 36px; font-size: 0.78rem; }
