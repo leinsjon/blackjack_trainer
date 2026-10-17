@@ -67,8 +67,8 @@ export function drawSdChart(container, points, { label }) {
     <div class="sd-legend">
       <span><i class="sw actual"></i>Your net</span>
       <span><i class="sw center"></i>Expected</span>
-      <span><i class="sw b1"></i>±1σ</span>
-      <span><i class="sw b2"></i>±2σ</span>
+      <span><i class="sw b1"></i>±1σ (68% CI)</span>
+      <span><i class="sw b2"></i>±2σ (95% CI)</span>
     </div>
     <div class="sd-plot">
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}: net ${fmt(last.actual)}, expected ${fmt(last.center)}, ${z.toFixed(1)} standard deviations">
