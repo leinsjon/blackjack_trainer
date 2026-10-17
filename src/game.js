@@ -95,20 +95,36 @@ export class Game {
   // Pulls a card of the given value from the shoe for drills, so the count and
   // shoe composition stay consistent.
   take(value) {
-    for (let i = this.shoe.length - 1; i >= 0; i--) {
-      if (cardValue(this.shoe[i]) === value) {
-        const [card] = this.shoe.splice(i, 1);
-        this.runningCount += hiLo(card);
-        return card;
+    // Drills can use up one rank; reshuffle once if none is left.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      for (let i = this.shoe.length - 1; i >= 0; i--) {
+        if (cardValue(this.shoe[i]) === value) {
+          const [card] = this.shoe.splice(i, 1);
+          this.runningCount += hiLo(card);
+          return card;
+        }
       }
+      this.shuffle();
     }
     return this.draw();
+  }
+
+  // A hole card that does not give the dealer blackjack, for scenario drills.
+  holeWithoutBlackjack() {
+    const up = cardValue(this.dealer[0]);
+    const bad = up === 11 ? 10 : up === 10 ? 11 : 0;
+    for (let i = this.shoe.length - 1; i >= 0; i--) {
+      if (cardValue(this.shoe[i]) !== bad) return this.shoe.splice(i, 1)[0];
+    }
+    return this.draw({ counted: false });
   }
 
   // wagers: dollar bet per seat (0 or missing = empty seat).
   // focus: 'all' | 'hard' | 'soft' | 'pairs'. playOut: keep playing after the
   // first decision on each hand instead of ending it there.
-  deal({ wagers = [100], focus = 'all', playOut = true } = {}) {
+  // scenario: { hands: [card values per seat], up: dealer upcard value } to
+  // deal set situations (the mistakes drill); the dealer never has blackjack.
+  deal({ wagers = [100], focus = 'all', playOut = true, scenario = null } = {}) {
     this.justShuffled = false;
     if (this.shoe.length < this.shoeSize * 0.25) this.shuffle();
     this.playOut = playOut;
@@ -120,13 +136,23 @@ export class Game {
 
     // Deal like a casino: one card to each seat, dealer upcard, second card to
     // each seat, dealer hole card (not counted until revealed).
-    const drill = focus !== 'all' ? this.hands.map(() => drillValues(focus, this.rng)) : null;
+    const drill = scenario
+      ? scenario.hands
+      : focus !== 'all' && focus !== 'mistakes'
+        ? this.hands.map(() => drillValues(focus, this.rng))
+        : null;
     for (let round = 0; round < 2; round++) {
       this.hands.forEach((h, i) => {
         h.cards.push(drill ? this.take(drill[i][round]) : this.draw());
       });
-      if (round === 0) this.dealer = [this.draw()];
-      else this.dealer.push(this.draw({ counted: false }));
+      if (round === 0) this.dealer = [scenario ? this.take(scenario.up) : this.draw()];
+      else this.dealer.push(scenario ? this.holeWithoutBlackjack() : this.draw({ counted: false }));
+    }
+    // Scenario hands of three cards (totals no two-card hand makes).
+    if (drill) {
+      this.hands.forEach((h, i) => {
+        for (const v of drill[i].slice(2)) h.cards.push(this.take(v));
+      });
     }
     this.holeRevealed = false;
 

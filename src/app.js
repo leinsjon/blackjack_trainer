@@ -3,7 +3,7 @@ import { Game, SEATS } from './game.js';
 import { houseEdge, roundVariance } from './edge.js';
 import { drawSdChart, cumulative } from './sdchart.js';
 import { chipSVG } from './chips.js';
-import { rankMistakes, recentMistakes } from './mistakes.js';
+import { rankMistakes, recentMistakes, mistakeScenario } from './mistakes.js';
 
 const CHIPS = [5, 25, 100, 500, 1000];
 const DEFAULT_TRAINING = {
@@ -52,6 +52,15 @@ function save(key, value) {
 }
 
 let rules = load('bj.rules', DEFAULT_RULES);
+// Version 2 made late surrender off by default: turn it off once for saved rules.
+if ((rules.version ?? 1) < 2) {
+  rules.surrender = false;
+}
+delete rules.version;
+delete rules.hitSplitAces; // option that was briefly offered, then removed
+const RULES_VERSION = 2;
+const saveRules = () => save('bj.rules', { ...rules, version: RULES_VERSION });
+saveRules();
 let training = load('bj.training', DEFAULT_TRAINING);
 if (!Array.isArray(training.wagers) || training.wagers.length !== SEATS) {
   training.wagers = [...DEFAULT_TRAINING.wagers];
@@ -390,7 +399,13 @@ function deal() {
     setFeedback('Place a bet in at least one circle to deal.');
     return;
   }
-  game.deal({ wagers: training.wagers, focus: training.focus, playOut: training.playOut });
+  let scenario = null;
+  let note = '';
+  if (training.focus === 'mistakes') {
+    scenario = mistakeScenario(mistakeLog, training.wagers.filter((w) => w > 0).length);
+    if (!scenario) note = 'No mistakes to drill yet, so this hand is dealt normally. ';
+  }
+  game.deal({ wagers: training.wagers, focus: training.focus, playOut: training.playOut, scenario });
   handCount += new Set(game.hands.map((h) => h.seat)).size;
   try {
     localStorage.setItem('bj.handCount', String(handCount));
@@ -403,7 +418,7 @@ function deal() {
   if (game.phase === 'over') {
     finishRound(shuffled);
   } else {
-    setFeedback(`${shuffled}Your move on the highlighted hand.`);
+    setFeedback(`${note}${shuffled}Your move on the highlighted hand.`);
   }
   render();
 }
@@ -596,7 +611,7 @@ $('settings').addEventListener('close', () => {
   const rulesChanged = JSON.stringify(nextRules) !== JSON.stringify(rules);
   rules = nextRules;
   training = nextTraining;
-  save('bj.rules', rules);
+  saveRules();
   save('bj.training', training);
   applyRules();
   if (rulesChanged) {

@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_RULES, correctAction, buildChart } from '../src/strategy.js';
+import { DEFAULT_RULES, correctAction, buildChart, isBlackjack } from '../src/strategy.js';
 import { actionEVs } from '../src/ev.js';
 import { Game, hiLo } from '../src/game.js';
 
 const c = (rank) => ({ rank, suit: '♠' });
 const ALL = { canDouble: true, canSplit: true, canSurrender: true };
-const rules = (over = {}) => ({ ...DEFAULT_RULES, ...over });
+// Tests use late surrender unless they say otherwise.
+const rules = (over = {}) => ({ ...DEFAULT_RULES, surrender: true, ...over });
 const play = (a, b, up, r = rules(), av = ALL) =>
   correctAction([c(a), c(b)], up === 'A' ? 11 : Number(up), r, av);
 
@@ -177,4 +178,37 @@ test('mistake log ranks by per-hand EV and filters recent hands', async () => {
   // Last 100 of 200 hands: hands 101-200.
   assert.deepEqual(recentMistakes(log, 200, 100).map((m) => m.id), [2, 4]);
   assert.equal(recentMistakes(log, 200, null).length, 4);
+});
+
+test('mistakes drill deals the logged situations', async () => {
+  const { situationHand, mistakeScenario } = await import('../src/mistakes.js');
+  const { handTotal, cardValue, isPair } = await import('../src/strategy.js');
+  const toCards = (vals) => vals.map((v) => ({ rank: v === 11 ? 'A' : String(v), suit: '♠' }));
+  for (const sit of ['Hard 12 vs dealer 3', 'Hard 4 vs dealer 9', 'Hard 20 vs dealer A', 'Soft 18 vs dealer 9', 'Soft 21 vs dealer 6']) {
+    const s = situationHand(sit);
+    const cards = toCards(s.hand);
+    const { total, soft } = handTotal(cards);
+    const [, kind, t] = /^(\w+) (\d+)/.exec(sit);
+    assert.equal(total, Number(t), sit);
+    assert.equal(soft, kind === 'Soft', sit);
+    if (sit !== 'Hard 4 vs dealer 9') assert.ok(!isPair(cards), sit);
+  }
+  assert.deepEqual(situationHand('Pair of Aces vs dealer 10'), { hand: [11, 11], up: 10 });
+  assert.deepEqual(situationHand('Pair of 8s vs dealer A'), { hand: [8, 8], up: 11 });
+
+  const log = [
+    { id: 1, hand: 1, situation: 'Hard 12 vs dealer 3', chose: 'S', book: 'H', cost: 5, stake: 100 },
+    { id: 2, hand: 2, situation: 'Pair of 8s vs dealer 10', chose: 'S', book: 'P', cost: 6, stake: 100 },
+  ];
+  const sc = mistakeScenario(log, 2);
+  assert.equal(sc.hands.length, 2);
+  const g = new Game(rules());
+  for (let i = 0; i < 20; i++) {
+    const scenario = mistakeScenario(log, 2);
+    g.deal({ wagers: [100, 100], scenario });
+    assert.equal(cardValue(g.dealer[0]), scenario.up);
+    assert.deepEqual(g.hands.map((h) => h.cards.map(cardValue)), scenario.hands);
+    assert.ok(!isBlackjack(g.dealer));
+  }
+  assert.equal(mistakeScenario([], 1), null);
 });

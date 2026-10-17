@@ -8,7 +8,7 @@ export const DEFAULT_RULES = {
   h17: false, // dealer hits soft 17
   das: true, // double after split
   doubleOn: 'any', // 'any' | '9-11' | '10-11'
-  surrender: true, // late surrender
+  surrender: false, // late surrender
   resplitAces: false,
   maxHands: 4, // max hands after splitting
   blackjackPays: '3:2', // '3:2' | '6:5'
