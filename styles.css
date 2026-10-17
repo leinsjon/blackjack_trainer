@@ -448,3 +448,5 @@ dialog h3 { font-size: 0.85rem; margin: 14px 0 6px; color: var(--muted); }
 .ms-entries li { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px dashed rgba(255, 255, 255, 0.08); }
 .ms-remove { background: rgba(248, 113, 113, 0.15); color: #fecaca; border: 1px solid rgba(248, 113, 113, 0.4); border-radius: 999px; padding: 3px 10px; font-size: 0.75rem; font-weight: 600; }
 .ms-remove-all { margin: 0 0 10px 36px; font-size: 0.78rem; }
+.archive-item.all-hands { border-color: rgba(242, 201, 76, 0.45); background: rgba(242, 201, 76, 0.05); }
+.archive-item.all-hands .a-date { color: var(--gold); }

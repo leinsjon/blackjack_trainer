@@ -72,6 +72,40 @@ stats.startedAt ??= Date.now();
 const MAX_ARCHIVE = 25;
 let archive = loadArchive();
 
+// Totals of every closed session, kept apart from the archive so they survive
+// old sessions rolling off it. Seeded from the archive the first time.
+const LIFETIME_FIELDS = ['rounds', 'hands', 'decisions', 'correct', 'net', 'expected', 'evLost', 'edgeCost'];
+const MAX_LIFETIME_HISTORY = 20000;
+let lifetime = (() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('bj.lifetime') || 'null');
+    if (saved && typeof saved === 'object') return saved;
+  } catch {
+    // rebuild below
+  }
+  const base = { best: 0, history: [], startedAt: null };
+  for (const f of LIFETIME_FIELDS) base[f] = 0;
+  for (const a of [...archive].reverse()) addToLifetime(base, a);
+  return base;
+})();
+
+function addToLifetime(total, s) {
+  for (const f of LIFETIME_FIELDS) total[f] += s[f] || 0;
+  total.best = Math.max(total.best, s.best || 0);
+  total.history = total.history.concat(s.history || []).slice(-MAX_LIFETIME_HISTORY);
+  if (s.startedAt && (!total.startedAt || s.startedAt < total.startedAt)) total.startedAt = s.startedAt;
+  return total;
+}
+
+function saveLifetime() {
+  try {
+    localStorage.setItem('bj.lifetime', JSON.stringify(lifetime));
+  } catch {
+    lifetime.history = lifetime.history.slice(-5000);
+    save('bj.lifetime', lifetime);
+  }
+}
+
 // All-time hand counter and mistake log, kept across sessions. Mistakes from
 // before the log existed are seeded from the session logs with hand 0, so
 // they only show under "All hands".
@@ -639,6 +673,8 @@ function newSession() {
   if (!window.confirm(msg)) return;
   clearTimeout(autoTimer);
   if (played) {
+    addToLifetime(lifetime, stats);
+    saveLifetime();
     archive.unshift({
       ...stats,
       endedAt: Date.now(),
@@ -703,40 +739,54 @@ function mistakesTable(list) {
 const dateFmt = (t) =>
   new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-function renderArchive() {
-  const el = $('archive');
-  if (!archive.length) {
-    el.innerHTML = '<p class="note">No past sessions yet. Start a new session to archive this one.</p>';
-    return;
-  }
-  el.innerHTML = archive
-    .map((a, i) => {
-      const acc = a.decisions ? `${Math.round((a.correct / a.decisions) * 100)}%` : '–';
-      const netClass = a.net > 0.005 ? 'pos' : a.net < -0.005 ? 'neg' : '';
-      return `
-      <details class="archive-item" data-i="${i}">
+// Every hand ever played: closed sessions plus the current one.
+function allHandsEntry() {
+  const all = addToLifetime(structuredClone(lifetime), stats);
+  const latest = [...mistakeLog].sort((a, b) => (b.hand - a.hand) || ((b.t ?? 0) - (a.t ?? 0)));
+  return { ...all, mistakes: latest.slice(0, 100), totalMistakes: latest.length };
+}
+
+function archiveItem(a, i, { allHands = false } = {}) {
+  const acc = a.decisions ? `${Math.round((a.correct / a.decisions) * 100)}%` : '–';
+  const netClass = a.net > 0.005 ? 'pos' : a.net < -0.005 ? 'neg' : '';
+  const note = allHands
+    ? `Every session${a.startedAt ? ` since ${dateFmt(a.startedAt)}` : ''}, including this one. Totals keep counting after old sessions leave the archive.`
+    : `${a.rules}${a.houseEdge !== undefined ? ` · house edge ${(a.houseEdge * 100).toFixed(2)}%` : ''}. Ended ${dateFmt(a.endedAt)}.`;
+  const mistakesNote = allHands && a.totalMistakes > a.mistakes.length
+    ? `<p class="note">Latest ${a.mistakes.length} of ${a.totalMistakes}. The Mistakes button ranks them all.</p>`
+    : '';
+  return `
+      <details class="archive-item${allHands ? ' all-hands' : ''}" data-i="${i}">
         <summary>
-          <span class="a-date">${dateFmt(a.startedAt ?? a.endedAt)}</span>
+          <span class="a-date">${allHands ? 'All hands' : dateFmt(a.startedAt ?? a.endedAt)}</span>
           <span>${a.hands} hands</span>
           <span class="${netClass}">${money(a.net)}</span>
           <span>${acc}</span>
         </summary>
-        <p class="note">${a.rules}${a.houseEdge !== undefined ? ` · house edge ${(a.houseEdge * 100).toFixed(2)}%` : ''}. Ended ${dateFmt(a.endedAt)}.</p>
+        <p class="note">${note}</p>
         <dl class="summary">${sessionRows(a).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
         <h3>Net vs the cards dealt</h3>
         <div class="sd-chart a-dealt"></div>
         <h3>Net vs hands and stakes only</h3>
         <div class="sd-chart a-blind"></div>
         <h3>Mistakes</h3>
-        ${mistakesTable(a.mistakes || [])}
+        ${mistakesNote}${mistakesTable(a.mistakes || [])}
       </details>`;
-    })
-    .join('');
+}
+
+function renderArchive() {
+  const el = $('archive');
+  const all = allHandsEntry();
+  const entries = [all, ...archive];
+  el.innerHTML =
+    archiveItem(all, 0, { allHands: true }) +
+    (archive.length
+      ? archive.map((a, i) => archiveItem(a, i + 1)).join('')
+      : '<p class="note">No past sessions yet. Start a new session to archive this one.</p>');
   el.querySelectorAll('details').forEach((d) => {
     d.addEventListener('toggle', () => {
       if (!d.open || d.dataset.drawn) return;
-      const a = archive[Number(d.dataset.i)];
-      const h = a.history || [];
+      const h = entries[Number(d.dataset.i)].history || [];
       drawSdChart(d.querySelector('.a-dealt'), cumulative(h, 'exp', 'var'), { label: 'Net vs cards dealt' });
       drawSdChart(d.querySelector('.a-blind'), cumulative(h, 'hexp', 'hvar'), { label: 'Net vs hands and stakes' });
       d.dataset.drawn = '1';
