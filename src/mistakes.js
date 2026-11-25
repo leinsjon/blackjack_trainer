@@ -92,13 +92,24 @@ export function situationHand(situation, rng = Math.random) {
   return null;
 }
 
-// Picks a round of situations for the mistakes drill, weighted by the EV each
-// mistake group has cost (frequency × cost per hand). All seats share the
-// first pick's dealer upcard, using other mistakes with that upcard when there
-// are any. Returns { hands, up } or null when there is nothing to drill.
-export function mistakeScenario(log, seats, rng = Math.random) {
-  const groups = rankMistakes(log)
-    .map((g) => ({ g, weight: Math.max(g.units, 0.001), parsed: situationHand(g.situation, rng) }))
+// Picks a round of situations for the mistakes drill. Each situation is
+// weighted by the square root of the EV its mistakes have cost (so one costly
+// spot does not crowd out the rest), and situations in `recent` (dealt in the
+// last few rounds) are skipped so the drill does not repeat itself. All seats
+// share one dealer upcard and get different situations where there are any.
+// Returns { hands, up, situations }, or null when there is nothing to drill
+// (no mistakes, or every one was dealt recently).
+export function mistakeScenario(log, seats, rng = Math.random, recent = []) {
+  const bySituation = new Map();
+  for (const g of rankMistakes(log)) {
+    const x = bySituation.get(g.situation) ?? { situation: g.situation, units: 0 };
+    x.units += g.units;
+    bySituation.set(g.situation, x);
+  }
+  const skip = new Set(recent);
+  const groups = [...bySituation.values()]
+    .filter((x) => !skip.has(x.situation))
+    .map((x) => ({ ...x, weight: Math.sqrt(Math.max(x.units, 0.001)), parsed: situationHand(x.situation, rng) }))
     .filter((x) => x.parsed);
   if (!groups.length) return null;
   const pickFrom = (list) => {
@@ -108,11 +119,14 @@ export function mistakeScenario(log, seats, rng = Math.random) {
   };
   const first = pickFrom(groups);
   const up = first.parsed.up;
-  const sameUp = groups.filter((x) => x.parsed.up === up);
   const hands = [first.parsed.hand];
+  const situations = [first.situation];
   for (let i = 1; i < seats; i++) {
-    const x = pickFrom(sameUp);
-    hands.push(situationHand(x.g.situation, rng).hand);
+    const sameUp = groups.filter((x) => x.parsed.up === up);
+    const fresh = sameUp.filter((x) => !situations.includes(x.situation));
+    const x = pickFrom(fresh.length ? fresh : sameUp);
+    hands.push(situationHand(x.situation, rng).hand);
+    situations.push(x.situation);
   }
-  return { hands, up };
+  return { hands, up, situations };
 }

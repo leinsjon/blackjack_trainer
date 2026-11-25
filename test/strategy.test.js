@@ -211,6 +211,22 @@ test('mistakes drill deals the logged situations', async () => {
     assert.ok(!isBlackjack(g.dealer));
   }
   assert.equal(mistakeScenario([], 1), null);
+
+  // Recently dealt situations are skipped, and one costly mistake does not
+  // crowd out the rest.
+  const mk = (situation, cost, n) => Array.from({ length: n }, () => ({ situation, chose: 'S', book: 'H', cost, stake: 100, hand: 1 }));
+  const mixed = [...mk('Hard 16 vs dealer 10', 100, 20), ...mk('Hard 12 vs dealer 3', 2, 1), ...mk('Soft 18 vs dealer 9', 5, 1)];
+  assert.equal(mistakeScenario(mk('Hard 16 vs dealer 10', 10, 1), 1, Math.random, ['Hard 16 vs dealer 10']), null);
+  const seen = new Map();
+  let recent = [];
+  for (let i = 0; i < 300; i++) {
+    const s = mistakeScenario(mixed, 1, Math.random, recent.flat());
+    assert.ok(!recent.flat().includes(s.situations[0]), 'repeated a situation back to back');
+    recent = [s.situations];
+    seen.set(s.situations[0], (seen.get(s.situations[0]) ?? 0) + 1);
+  }
+  assert.equal(seen.size, 3);
+  assert.ok(seen.get('Hard 16 vs dealer 10') < 200);
 });
 
 test('counting drills and quiz grading', async () => {

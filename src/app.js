@@ -430,6 +430,9 @@ function setWager(seat, amount) {
 }
 
 let roundsSinceQuiz = 0;
+// Situations the mistakes drill dealt in the last few rounds, newest last.
+const DRILL_COOLDOWN = 3;
+let recentDrill = [];
 
 function deal() {
   clearTimeout(autoTimer);
@@ -452,8 +455,13 @@ function deal() {
   let scenario = null;
   let note = '';
   if (training.focus === 'mistakes') {
-    scenario = mistakeScenario(mistakeLog, training.wagers.filter((w) => w > 0).length);
-    if (!scenario) note = 'No mistakes to drill yet, so this hand is dealt normally. ';
+    scenario = mistakeScenario(mistakeLog, training.wagers.filter((w) => w > 0).length, Math.random, recentDrill.flat());
+    recentDrill = [...recentDrill, scenario?.situations ?? []].slice(-DRILL_COOLDOWN);
+    if (!scenario) {
+      note = mistakeLog.length
+        ? 'Your recent drill spots are resting, so this hand is dealt normally. '
+        : 'No mistakes to drill yet, so this hand is dealt normally. ';
+    }
   }
   game.deal({ wagers: training.wagers, focus: training.focus, playOut: training.playOut, scenario });
   handCount += new Set(game.hands.map((h) => h.seat)).size;
